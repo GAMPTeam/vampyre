@@ -53,6 +53,12 @@ or via a batch file on Windows
 C:\path\to\vampyre\docs make.bat
 ```
 
+Note that if you add a new module, you will need to recreate the module index
+via the command:
+```bash
+> sphinx-apidoc  -o . ..\vampyre\
+```
+
 Documentation can be found at `_build/index.html`. Documentation will be hosted at [Readthedocs.org](https://readthedocs.org) once the package goes live on Pypi.
 
 

@@ -1,6 +1,7 @@
-import numpy as np
-import scipy.linalg.blas as blas
-
+# Load sub-packages
+import vampyre.common
+import vampyre.estim
+import vampyre.trans
 
 def version():
     """

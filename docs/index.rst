@@ -11,6 +11,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   intro
+   glm
+   graph
+
 
 
 Indices and tables
