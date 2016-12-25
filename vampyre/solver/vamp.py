@@ -1,4 +1,6 @@
+# Import general packages
 import numpy as np
+import time
 
 # Import other subpackages
 import vampyre.estim as estim
@@ -70,6 +72,7 @@ class Vamp(Solver):
         for it in range(self.nit):
             
             # Estimator 2
+            t0 = time.time()
             if self.comp_cost:
                 z2, zvar2, cost2 = self.est2.est(r2, rvar2, return_cost=True)
             else:
@@ -87,6 +90,8 @@ class Vamp(Solver):
             r1, rvar1 = self.var_hdl.msg_sub(z2,zvar2,r2,rvar2,self.r1,self.rvar1)
             self.r1 = r1
             self.rvar1 = rvar1
+            t1 = time.time()
+            self.time_est2 = t1-t0
             
             # Estimator 1
             if self.comp_cost:
@@ -109,6 +114,8 @@ class Vamp(Solver):
             if self.comp_cost:
                 self.cost = self.cost1 + self.cost2 - self.var_cost1 \
                     - self.var_cost2 + self.var_hdl.Hgauss(self.zvar1)
+            t2 = time.time()
+            self.time_est1 = t2-t1
             
             # Save history
             self.save_hist()
