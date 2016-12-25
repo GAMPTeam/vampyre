@@ -40,7 +40,10 @@ class Estim(object):
         
         * :math:`\\hat{z} = E(z)` 
         * :math:`\\tau_z = \\mathrm{var}(z)`
-        * :math:`c = -\\ln Z`, where :math:`Z=\int e^{-f(z)}dz`.
+        * :math:`c = -\\ln Z`, where :math:`Z=\int e^{-f(z)}dz`.  This can 
+          also be computed by :math:`c = E[f|p] - H(p)` where :math:`p` is the 
+          density :math:`p(z) = \\exp(-f(z))`.
+            
        
         The parameters are:
         
@@ -74,7 +77,9 @@ class Estim(object):
         * :math:`\\hat{z} = E(z|r,\\tau_r)`
         * :math:`\\tau_z = \\mathrm{var}(z|r,\\tau_r)`
         * :math:`c = -\\ln Z_a`, where :math:`Z_a` is the partition function, 
-          :math:`Z_a=\int e^{-f_a(z)}dz`.
+          :math:`Z_a=\int e^{-f_a(z)}dz`.  This can also be computed by 
+          :math:`c = E[f|r,\\tau_r] - H(p)` where :math:`p` is the 
+          conditional density :math:`p(z|r,\\tau_r)` above.
        
         The parameters are:
         

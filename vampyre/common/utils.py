@@ -13,6 +13,14 @@ class VpException(Exception):
         self.msg = msg
         
 
+class TestException(VpException):
+    """
+    Used to indicate failure in a unit test
+    """
+    def __init__(self,msg):
+        VpException.__init__(self,msg)
+        
+
 def repeat_axes(u,shape,rep_axes,rep=True):
     """
     Repeats an array over multiple axes
@@ -68,9 +76,14 @@ def repeat_sum(u,shape,rep_axes):
     return usum
         
     
-def repeat_test():
+def repeat_test(verbose=False, tol=1e-8, raise_exception=True):
     """
-    Unit test for the repeat_mult function
+    Unit test for the repeat_mult function.
+
+    :param Boolean verbose:  Print test results    
+    :param tol:  Tolerance for passing test
+    :param Boolean raise_exception:  Raises an error on test failure.  This 
+        can be caught in the unit test dispatcher.
     """    
     ushape = (2,2,3)
     rep_axes = (1,2)
@@ -84,7 +97,11 @@ def repeat_test():
         sum0 = np.sum(u[i,:,:])
         sum1 = np.sum(urep[i,:,:])
         d += np.abs(sum1-sum0)
+    if verbose:
+        print("total diff= {0:f}".format(d))
+                
+    if (d > tol) and raise_exception:
+        raise TestException("Sum along repeated matrix is not conistent")
     
-    print("total diff= {0:f}".format(d))
     
                 

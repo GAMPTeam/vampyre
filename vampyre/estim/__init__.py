@@ -2,3 +2,8 @@
 from vampyre.estim.base import Estim
 from vampyre.estim.gaussian import GaussEst
 from vampyre.estim.mixture import MixEst
+from vampyre.estim.linear import LinEstim
+from vampyre.estim.variance import VarHdl, VarHdlSimp
+from vampyre.estim.discrete import DiscreteEst
+
+

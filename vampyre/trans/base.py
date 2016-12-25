@@ -2,7 +2,7 @@ class LinTrans(object):
     """
     Linear transform base class
     
-    The class represents deterministic lienar operations :math:`z_1=Az_0`.
+    The class provides methods for linear operations :math:`z_1=Az_0`.
     
     **SVD decomposition**
     
@@ -29,7 +29,7 @@ class LinTrans(object):
         """
         raise NotImplementedError()
         
-    def dotH(self,z0):
+    def dotH(self,z1):
         """
         Compute conjugate transpose multiplication :math:`A^*(z1)`
         """
@@ -61,29 +61,59 @@ class LinTrans(object):
     
     def get_svd_diag(self):
         """
-        Gets parameters of the SVD diagonal multiplication.
+        Gets diagonal parameters of the SVD diagonal multiplication.
         
-        It is assumed that the transformed output
-        :code:`q0 = self.VsvdH(z0)` is represented as an
-        :class:`numpy.ndarray`.  This method provides variables
-        to perform the diagonal multiplication in this space.
-        With the parameters the forward multiplication :code:`z1=A.dot(z0)` should 
-        be equivalent to::
+        The method returns a set of diagonal parameters, :param:`s`, 
+        in the SVD-like decomposition.  With the parameters the 
+        forward multiplication :code:`z1=A.dot(z0)` should be equivalent to::
 
-            import vampyre as vp
             
             Aop = ... # LinTrans object with SVD enabled
-            q0   = Aop.VsvdH(z0)
-            srep = vp.common.repeat_axes(s,sshape,srep_axes,rep=False)
-            q1   = srep*q0
-            z1   = Aop.Usvd(q1)
+            s  = Aop.get_svd_diag()[0]
+            q0 = Aop.VsvdH(z0)
+            q1 = Aop.svd_dot(s, q0)
+            z1 = Aop.Usvd(q1)
+            
+        One can also compute any function of the matrix.  Suppose
+        :math:`f` is a any continuous function such that :math:`f(0)=0`.
+        Then, the transform :math:`Uf(S)V^*z_0` is equivalent to::
         
-        :returns: :code:`s, sshape, srep_axes` where 
-           :code:`s` is the singular values, :code:`sshape` is the shape
-           of the parameters in the transformed space and 
-           :code:`srep_axes` are the list of axes on which the terms
-           :code:`s` are to be repeated.
+            s  = Aop.get_svd_diag()[0]
+            q0 = Aop.VsvdH(z0)
+            q1 = Aop.svd_dot(f(s), q0)
+            z1 = Aop.Usvd(q1)
+        
+        :returns: :code:`s,sshape,srep_axes`, the diagonal parameters 
+            :code:`s`, the shape in the transformed domain :code:`sshape`,
+            and the axes on which the diagonal parameters are to be 
+            repeated, :code:`srep_axes`  
         """
         raise NotImplementedError()
         
+    def svd_dot(self,s1,q0):
+        """
+        Performs diagonal matrix multiplication. 
+        
+        Implements :math:`q_1 = \\mathrm{diag}(s_1) q_0`.
+        
+        :param s1: diagonal parameters
+        :param q0: input to the diagonal multiplication
+        :returns: :code:`q1` diagonal multiplication output
+        """
+        raise NotImplementedError()
+        
+    def svd_dotH(self,s1,q1):
+        """
+        Performs diagonal matrix multiplication conjugate
+        
+        Implements :math:`q_0 = \\mathrm{diag}(s_1)^* q_1`.
+        
+        :param s1: diagonal parameters
+        :param q1: input to the diagonal multiplication
+        :returns: :code:`q0` diagonal multiplication output
+        """
+        raise NotImplementedError()
+        
+
+            
         

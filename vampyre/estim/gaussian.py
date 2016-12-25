@@ -1,5 +1,6 @@
 import numpy as np
 from vampyre.common.utils import repeat_axes, repeat_sum
+from vampyre.common.utils import TestException
 from vampyre.estim.base import Estim
 
 class GaussEst(Estim):
@@ -96,7 +97,9 @@ class GaussEst(Estim):
         """
         zhatvar = rvar*self.zvar/(rvar + self.zvar)
         gain = self.zvar/(rvar + self.zvar)
-        gain = repeat_axes(gain,self.shape,self.var_axes,rep=False)        
+        gain = repeat_axes(gain,self.shape,self.var_axes,rep=False) 
+        if not avg_var_cost:
+            zhatvar = repeat_axes(zhatvar,self.shape,self.var_axes) 
         
         zhat = gain*(r-self.zmean) + self.zmean
         
@@ -112,26 +115,27 @@ class GaussEst(Estim):
             cost = np.sum(cost)
             
         # Compute cost
+        nz = np.prod(self.shape)
         if self.map_est:
             clog =  np.log(2*np.pi*self.zvar) 
             if avg_var_cost:
-                clog = repeat_sum(clog, self.shape, self.var_axes) 
+                clog = np.mean(clog)*nz
             else:
                 clog = np.log(2*np.pi*zvar1)
             cost += clog
         else:
             d = np.log(self.zvar/zhatvar) 
             if avg_var_cost:
-                cost += repeat_sum(d, self.shape, self.var_axes)
+                cost += np.mean(d)*nz
             else:
-                cost += repeat_axes(d, self.shape, self.var_axes)                
+                cost += d                
             
         # Scale for real case
         if not self.is_complex:
             cost = 0.5*cost            
         return zhat, zhatvar, cost
             
-def gauss_test(zshape=(1000,10)):
+def gauss_test(zshape=(1000,10), verbose=False, tol=0.1):
     """
     Unit test for the Gaussian estimator class :class:`GaussEst`.
     
@@ -142,9 +146,13 @@ def gauss_test(zshape=(1000,10)):
     
     Then, the :func:`Gaussian.est` and :func:`Gaussian.est_init` methods 
     are called to see if :math:`z` with the expected variance.
-            
+                
     :param zshape: Shape of :param:`z`.  The parameter can be an 
        arbitrary :code:`ndarray'.
+    :param Boolean verbose:  Flag indicating if results are to be printed
+    :param tol:  Tolerance for raising an error
+    :param Boolean raise_exception: raise an :class:`TestException` if 
+       test fails.
     """    
 
     # Generate synthetic data with random parameters
@@ -160,12 +168,19 @@ def gauss_test(zshape=(1000,10)):
     # Inital estimate
     zmean1, zvar1 = est.est_init()
     zerr = np.mean(np.abs(z-zmean1)**2)
-    print("Initial:    True: {0:f} Est:{1:f}".format(zerr,zvar1))
+    if verbose:
+        print("Initial:      True: {0:f} Est:{1:f}".format(zerr,zvar1))
+    if (np.abs(zerr-zvar1) > tol*np.abs(zerr)):
+        raise TestException("Initial estimate Gaussian error "+ 
+           "does not match predicted value")
     
-    # Inital estimate
+    # Posterior estimate
     zhat, zhatvar, cost = est.est(r,rvar,return_cost=True)
     zerr = np.mean(np.abs(z-zhat)**2)
-    print("Posterior:  True: {0:f} Est:{1:f}".format(zerr,zhatvar))
-    
+    if verbose:
+        print("Posterior:    True: {0:f} Est:{1:f}".format(zerr,zhatvar))
+    if (np.abs(zerr-zhatvar) > tol*np.abs(zhatvar)):
+        raise TestException("Posterior estimate Gaussian error "+ 
+           "does not match predicted value")        
     
     

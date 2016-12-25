@@ -12,8 +12,6 @@ Contents:
    :maxdepth: 2
 
    intro
-   glm
-   graph
 
 
 

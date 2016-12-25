@@ -1,5 +1,6 @@
 import numpy as np
 from vampyre.common.utils import repeat_axes, repeat_sum, VpException
+from vampyre.common.utils import VpException, TestException
 from vampyre.estim.base import Estim
 from vampyre.estim.gaussian import GaussEst
 
@@ -92,7 +93,7 @@ class MixEst(Estim):
             zmeani, zvari, ci = \
                est.est(r,rvar,return_cost=True,avg_var_cost=False)
             zmean_list.append(zmeani)
-            zvari = repeat_axes(zvari,self.shape,self.var_axes)
+            #zvari = repeat_axes(zvari,self.shape,self.var_axes)
             zvar_list.append(zvari)
             cost_list.append(ci)
             
@@ -126,7 +127,7 @@ class MixEst(Estim):
             pi = self.w[i]*np.exp(-cost_list[i] + cmin)
             psum += pi
             p_list.append(pi)
-        cost = np.log(psum) + cmin
+        cost = np.sum(-np.log(psum) + cmin)
         for i in range(ncomp):
             p_list[i] /= psum        
         
@@ -147,7 +148,7 @@ class MixEst(Estim):
         else:
             return zmean, zvar
             
-def mix_test(zshape=(1000,10), verbose=False, tol=0.1):
+def mix_test(zshape=(1000,10), verbose=False, tol=0.1, raise_exception=True):
     """
     Unit test for the :class:`MixEst` class
     
@@ -162,7 +163,8 @@ def mix_test(zshape=(1000,10), verbose=False, tol=0.1):
     :param zshape: shape of :math:`z`
     :param Boolean verbose:  prints results.  
     :param tol:  error tolerance to consider test as passed
-    :returns:  :code:`fail` indicating if test passed within tolerance.
+    :param Boolean raise_exception:  Raise an error if test fails. 
+       The exception can be caught by the test_suite dispatcher.
     """    
 
     # Generate random components    
@@ -203,20 +205,16 @@ def mix_test(zshape=(1000,10), verbose=False, tol=0.1):
     zerr1 = np.mean(np.abs(z-zmean1)**2)
     if verbose:
         print("Initial:    True: {0:f} Est:{1:f}".format(zerr1,zvar1))
-    fail1 = (np.abs(zerr1-zvar1) > 0.1*zerr1)
+    if (np.abs(zerr1-zvar1) > tol*np.abs(zerr1)) and raise_exception:
+        raise TestException("Initial estimate GMM error "+ 
+           " does not match predicted value")
     
     # Posterior estimate
     zhat, zhatvar, cost = est.est(r,rvar,return_cost=True)
     zerr = np.mean(np.abs(z-zhat)**2)
     if verbose:
         print("Posterior:  True: {0:f} Est:{1:f}".format(zerr,zhatvar))
-    fail2 = (np.abs(zerr-zhatvar) > 0.1*zerr)
-    fail = fail1 or fail2
-    
-    if verbose:
-        if fail:
-            print("Fail")
-        else:
-            print("Pass")                                
-    return fail
+    if (np.abs(zerr-zhatvar) > tol*np.abs(zerr)) and raise_exception:
+        raise TestException("Posterior estimate GMM error "+ 
+           " does not match predicted value")
 
