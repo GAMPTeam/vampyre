@@ -21,7 +21,8 @@ def test_version():
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\
        ['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
-       ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult]\
+       ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
+       ['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult]\
     ]
     
     cnt = 0
