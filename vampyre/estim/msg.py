@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 """
-variance.py:  Basic classes for variance handling
+msg.py:  Basic classes for message passing
 """
 import numpy as np
 
 # Import other sub-packages
 import vampyre.common as common
 
-class VarHdl(object):
+class MsgHdl(object):
     """
-    Base class for an estimation variance handler
+    Base class for Gaussian message passing handler
     """
     def __init__(self):
         pass
@@ -45,23 +44,25 @@ class VarHdl(object):
         """
         raise NotImplementedError()
         
-    def cost(self,d,dvar,rvar):
+    def cost(self,z,r,zvar,rvar):
         """
         Computes the Gaussian cost in belief propagation.
         
-        Nominally, for MAP estimation, this should compute:
+        Nominally, for MAP estimation, this should compute the normalized
+        difference:
         
-        :math:`c = \|d\|^2/(2\\tau_r)
+        :math:`c = \|z-r\|^2/(2\\tau_r)
         
         For MMSE estimation, this computes,
         
-        :math:`c = \|d\|^2/(2\\tau_r) + n\\tau_d/\\tau_r
+        :math:`c = \|z-r\|^2/(2\\tau_r) + d\\tau_z/(2\\tau_r), 
         
-        where :math:`d` is a estimation difference and :math:`\\tau_r`
-        is a variance.
-        
-        :param d:  Estimation difference
-        :param rvar:  Variance
+        where :math:`d` is the dimension of the estimate.
+                
+        :param z:  Estimate :math:`z`
+        :param r:  Estimate :math:`r`        
+        :param zvar:  Variance :math:`\\tau_z`
+        :param rvar:  Variance :math:`\\tau_r`
         :returns: :code:`cost` the cost :math:`c` defined above.
         """
         raise NotImplementedError()
@@ -81,7 +82,7 @@ class VarHdl(object):
         raise NotImplementedError()
         
     
-class VarHdlSimp(VarHdl):
+class MsgHdlSimp(MsgHdl):
     """
     Simple estimation variance handler.
     
@@ -102,12 +103,12 @@ class VarHdlSimp(VarHdl):
     :param Boolean is_compelx:  If data is complex
     :param Boolean is_compelx:  If the estimation is MAP or MMSE
     """
-    def __init__(self, alpha_min=1e-5, alpha_max=1-1e-5, damp=1, rep_axes=[],\
+    def __init__(self, alpha_min=1e-5, alpha_max=1-1e-5, damp=0.95, rep_axes=[],\
                  shape = [], is_complex=False, map_est=True):
-        VarHdl.__init__(self)
+        MsgHdl.__init__(self)
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
-        self.damp = 1
+        self.damp = damp
         self.rep_axes = rep_axes
         self.is_complex = is_complex
         self.map_est = map_est
@@ -118,7 +119,7 @@ class VarHdlSimp(VarHdl):
         """
         Variance subtraction for message passing
         
-        See base class :class:`VarHdl` for more details.
+        See base class :class:`MsgHdl` for more details.
         
         :param z: Mean at the factor node
         :param zvar: Variance at the factor node
@@ -146,24 +147,26 @@ class VarHdlSimp(VarHdl):
                 
         return r1, rvar1
         
-    def cost(self,d,dvar,rvar):
+    def cost(self,z,r,zvar,rvar):
         """
         Computes the Gaussian cost in belief propagation.
         
-        See base class :class:`VarHdl` for more details.
+        See base class :class:`MsgHdl` for more details.
         
-        :param d:  Estimation difference
-        :param rvar:  Variance
+        :param z:  Estimate :math:`z`
+        :param r:  Estimate :math:`r`        
+        :param zvar:  Variance :math:`\\tau_z`
+        :param rvar:  Variance :math:`\\tau_r`
         :returns: :code:`cost` the cost :math:`c` defined above.
         """
         if self.rep_axes != []:
             rvar1 = common.repeat_axes(rvar,self.shape,self.rep_axes,rep=False) 
         else:
             rvar1 = rvar
-        cost = np.sum((1/rvar1)*(np.abs(d)**2))
+        cost = np.sum((1/rvar1)*(np.abs(z-r)**2))
         
         if not self.map_est:
-            cost += np.prod(d.shape)*np.mean(dvar/rvar)            
+            cost += np.prod(self.shape)*np.mean(zvar/rvar)            
             
         if not self.is_complex:
             cost *= 0.5
@@ -173,7 +176,7 @@ class VarHdlSimp(VarHdl):
         """
         Computes the Gaussian entropy for a given variance.
         
-        See base class :class:`VarHdl` for more details.
+        See base class :class:`MsgHdl` for more details.
         
         :param zvar:  Variance :math:`\\tau_z`
         :returns:  :code:`H` the Gaussian entropy
@@ -188,6 +191,113 @@ class VarHdlSimp(VarHdl):
         return H
         
         
+class ListMsgHdl(MsgHdl):
+    """
+    Message handler for a list of messages
+    
+    :param hdl_list:  List of variance handlers
+    """
+    pass
+    
+    def __init__(self, hdl_list):
+        self.hdl_list = hdl_list
+            
+
+    def msg_sub(self,z,zvar,r0,rvar0,r1_prev=[],rvar1_prev=[]):
+        """
+        Variance subtraction for message passing
         
+        See base class :class:`MsgHdl` for more details.
         
+        :param z: Mean at the factor node
+        :param zvar: Variance at the factor node
+        :param r0: Mean of the incoming msg to the factor node
+        :param rvar0:  Variance of the incoming msg to the factor node
+        :param r1_prev: Previous mean of the msg from the factor node.
+           This is used for damping messages.
+        :param rvar1_prev:  Previous variance of the msg from the factor node.    
+        """
+
+        # Create an empty list 
+        r1 = []
+        rvar1 = []
+        
+        # Loop over the message handlers
+        i = 0        
+        for hdl in self.hdl_list:
+            
+            # Get the items from the i-th element
+            zi = z[i]
+            zvari = zvar[i]
+            r0i = r0[i]
+            rvar0i = rvar0[i]
+            if r1_prev == []:
+                r1_previ = []
+            else:
+                r1_previ = r1_prev[i]            
+            if rvar1_prev == []:
+                rvar1_previ = []
+            else:                    
+                rvar1_previ = rvar1_prev[i]
+                
+            # Call the message handler
+            r1i, rvar1i = hdl.msg_sub(zi,zvari,r0i,rvar0i,r1_previ,rvar1_previ)
+            
+            # Add to the output list
+            r1.append(r1i)
+            rvar1.append(rvar1i)        
+            i += 1
+                
+        return r1, rvar1
+        
+    def cost(self,z,r,zvar,rvar):
+        """
+        Computes the Gaussian cost in belief propagation.
+        
+        See base class :class:`MsgHdl` for more details.
+        
+        :param z:  Estimate :math:`z`
+        :param r:  Estimate :math:`r`        
+        :param zvar:  Variance :math:`\\tau_z`
+        :param rvar:  Variance :math:`\\tau_r`
+        :returns: :code:`cost` the cost :math:`c` defined above.
+        """        
+        
+        # Loop over the message handlers and accumulate the cost
+        cost = 0
+        i = 0        
+        for hdl in self.hdl_list:
+            
+            # Get the items from the i-th element
+            zi = z[i]
+            ri = r[i]
+            rvari = rvar[i]
+            zvari = zvar[i]            
+            
+            # Call the message handler
+            ci = hdl.cost(zi,ri,zvari,rvari)
+            
+            # Add to the cost
+            cost += ci
+            i += 1
+                
+        return cost
+        
+    def Hgauss(self, zvar):
+        """
+        Computes the Gaussian entropy for a given variance.
+        
+        See base class :class:`VarHdl` for more details.
+        
+        :param zvar:  Variance :math:`\\tau_z`
+        :returns:  :code:`H` the Gaussian entropy
+        """        
+        # Loop over the message handlers and accumulate the Gaussian entropy
+        H = 0
+        i = 0        
+        for hdl in self.hdl_list:
+            zvari = zvar[i]            
+            H += hdl.Hgauss(zvari)
+            i += 1
+        return H        
         

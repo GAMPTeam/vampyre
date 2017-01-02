@@ -23,18 +23,18 @@ class Vamp(Solver):
     
     :param est1:  Estimator corresonding to :math:`f_1(z)`
     :param est2:  Estimator corresonding to :math:`f_2(z)`
-    :param var_hdl:  Variance handler.  
+    :param msg_hdl:  Message handler.  
     :param hist_list:  List of attributes to save the history of during the
        course of the iterations.
     :param nit:  Maximum number of iterations          
     :param comp_cost:  Compute cost
     """
-    def __init__(self, est1, est2, var_hdl=[], hist_list=[], nit=10,\
+    def __init__(self, est1, est2, msg_hdl=[], hist_list=[], nit=10,\
         comp_cost=False):
         Solver.__init__(self,hist_list)
         self.est1 = est1
         self.est2 = est2
-        self.var_hdl = var_hdl        
+        self.msg_hdl = msg_hdl        
         self.nit = nit
         self.comp_cost = comp_cost
                         
@@ -47,12 +47,12 @@ class Vamp(Solver):
         """
                     
         # Check if cost is available for both estimators
-        if not self.est1.cost_avail or not self.est2.cost_avail or self.var_hdl == []:
+        if not self.est1.cost_avail or not self.est2.cost_avail or self.msg_hdl == []:
             self.comp_cost = False
             
         # Set to default variance handler if not specified
-        if self.var_hdl == []:
-            self.var_hdl = estim.VarHdlSimp()
+        if self.msg_hdl == []:
+            self.msg_hdl = estim.MsgHdlSimp()
 
         # Initial esitmate
         if self.comp_cost:
@@ -84,10 +84,10 @@ class Vamp(Solver):
             
             # Variance cost
             if self.comp_cost:
-                self.var_cost2 = self.var_hdl.cost(z2-r2,zvar2,rvar2)
+                self.var_cost2 = self.msg_hdl.cost(z2,r2,zvar2,rvar2)
             
             # Msg passing to est 1
-            r1, rvar1 = self.var_hdl.msg_sub(z2,zvar2,r2,rvar2,self.r1,self.rvar1)
+            r1, rvar1 = self.msg_hdl.msg_sub(z2,zvar2,r2,rvar2,self.r1,self.rvar1)
             self.r1 = r1
             self.rvar1 = rvar1
             t1 = time.time()
@@ -103,17 +103,22 @@ class Vamp(Solver):
             self.zvar1 = zvar1
             self.cost1 = cost1            
             if self.comp_cost:
-                self.var_cost1 = self.var_hdl.cost(z1-r1,zvar1,rvar1)
+                self.var_cost1 = self.msg_hdl.cost(z1,r1,zvar1,rvar1)
+                
+            # Also store the estimates as zhat and zhatvar to avoid the
+            # confusing names, z1, zvar1
+            self.zhat = z1
+            self.zhatvar = zvar1
             
             # Msg passing to est 2
-            r2, rvar2 = self.var_hdl.msg_sub(z1,zvar1,r1,rvar1,self.r2,self.rvar2)
+            r2, rvar2 = self.msg_hdl.msg_sub(z1,zvar1,r1,rvar1,self.r2,self.rvar2)
             self.r2 = r2
             self.rvar2 = rvar2
-            
+                                
             # Compute total cost
             if self.comp_cost:
                 self.cost = self.cost1 + self.cost2 - self.var_cost1 \
-                    - self.var_cost2 + self.var_hdl.Hgauss(self.zvar1)
+                    - self.var_cost2 + self.msg_hdl.Hgauss(self.zvar1)
             t2 = time.time()
             self.time_est1 = t2-t1
             
@@ -179,11 +184,11 @@ def vamp_gauss_test(nz=100,ny=200,ns=10, snr=30, map_est=False, verbose=False,\
     est_out = estim.LinEstim(Aop,y,wvar,map_est=map_est)
     
     # Create the variance handler
-    var_hdl = estim.VarHdlSimp(map_est=map_est, is_complex=is_complex, \
+    msg_hdl = estim.MsgHdlSimp(map_est=map_est, is_complex=is_complex, \
         shape=zshape)
     
     # Create and run the solver
-    solver = Vamp(est_in,est_out,var_hdl=var_hdl,comp_cost=True)
+    solver = Vamp(est_in,est_out,msg_hdl=msg_hdl,comp_cost=True)
     solver.solve()
         
     # Comzpute Gaussian estimate
@@ -325,12 +330,12 @@ def vamp_gmm_test(nz=100,ny=200,ns=10, snr=30, verbose=False, mse_tol=-17):
     est_out = estim.LinEstim(Aop,y,wvar,map_est=map_est)
 
     # Create the variance handler
-    var_hdl = estim.VarHdlSimp(map_est=map_est, is_complex=is_complex,\
+    msg_hdl = estim.MsgHdlSimp(map_est=map_est, is_complex=is_complex,\
                                   shape=zshape)
 
     # Create and run the solver
     solver = Vamp(est_in,est_out,hist_list=['z2'],\
-             comp_cost=True, var_hdl=var_hdl)
+             comp_cost=True, msg_hdl=msg_hdl)
     solver.solve()
     
     # Compute the MSE as a function of the iteration

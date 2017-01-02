@@ -8,7 +8,10 @@ import os
 vp_path = os.path.abspath('../')
 if not vp_path in sys.path:
     sys.path.append(vp_path)
+
+sys.path.append(os.path.abspath('./sparse'))
 import vampyre as vp
+import vamp_sparse_test
 
 def test_version():
     vp.version_info()
@@ -22,7 +25,10 @@ def test_version():
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\
        ['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
        ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
-       ['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult]\
+       ['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
+       ['estim.interval.gauss_integral_test',vp.estim.interval.gauss_integral_test],\
+       ['estim.interval.hard_thresh_test',vp.estim.interval.hard_thresh_test],\
+       ['vamp_sparse_test.sparse_inv',vamp_sparse_test.sparse_inv]\
     ]
     
     cnt = 0
@@ -33,11 +39,11 @@ def test_version():
         cnt += 1
         try:
             fn()
-            print(name+" Pass")
+            print("{0:40s} Pass".format(name))
             cnt_pass += 1
         except vp.common.utils.TestException as err:
-            print(name+" Fail")      
-            print(err.msg)
+            print("{0:40s} Fail".format(name))
+            print("   "+err.msg)
     
     print("{0:d} out of {1:d} passed".format(cnt_pass,cnt))
             
