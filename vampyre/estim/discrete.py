@@ -20,7 +20,7 @@ class DiscreteEst(Estim):
        
     :note:  The class only currently supports MMSE estimation
     """    
-    def __init__(self, zval, pz, shape, var_axes='all',\
+    def __init__(self, zval, pz, shape, var_axes=(0,),\
                  is_complex=False):
         Estim.__init__(self)
         
@@ -72,7 +72,8 @@ class DiscreteEst(Estim):
         ndim = len(self.shape)
         axes_spec = [i for i in range(ndim) if i not in self.var_axes]
         if axes_spec != []:
-            zvar = np.tile(zvar, self.shape[axes_spec])
+            shapea = np.array(self.shape)
+            zvar = np.tile(zvar, shapea[axes_spec])
 
         if not avg_var_cost:
             cost = np.tile(cost,self.shape)            
@@ -183,7 +184,7 @@ def discrete_test(zshape=(1000,10), verbose=False, nvals=3,\
     r = z + np.random.normal(0,np.sqrt(rvar),zshape)
     
     # Create estimator
-    est = DiscreteEst(zval, pz, zshape)
+    est = DiscreteEst(zval, pz, zshape, var_axes='all')
     
     # Run the initial estimate
     zmean, zvar, cost = est.est_init(return_cost=True)

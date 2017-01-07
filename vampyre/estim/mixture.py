@@ -72,7 +72,6 @@ class MixEst(Estim):
         for i,est in enumerate(self.est_list):
             zmeani, zvari, ci = est.est_init(return_cost=True,avg_var_cost=False)
             zmean_list.append(zmeani)
-            #zvari = repeat_axes(zvari,self.shape,self.var_axes)
             zvar_list.append(zvari)
             cost_list.append(ci)
             
@@ -189,7 +188,7 @@ def mix_test(zshape=(1000,10), verbose=False, tol=0.1, raise_exception=True):
     est_list = []
     zcomp = np.zeros((nz,ncomp))
     for i in range(ncomp):
-        est = GaussEst(zmean[i], zvar[i], zshape)
+        est = GaussEst(zmean[i], zvar[i], zshape, var_axes='all')
         est_list.append(est)
         
         zcomp[:,i] = np.random.normal(zmean[i],np.sqrt(zvar[i]),nz)

@@ -210,7 +210,7 @@ def vamp_gauss_test(nz=100,ny=200,ns=10, snr=30, map_est=False, verbose=False,\
         
     # Compare the true and the output of the solver
     zvar = zvar0*wvar*np.trace(Q)/nz
-    zvar_err = np.abs(zvar-solver.zvar2)
+    zvar_err = np.abs(zvar-np.mean(solver.zvar2))
     if verbose:
         print("zvar error: {0:12.4e}".format(zvar_err))
     if zvar_err > tol:
@@ -218,31 +218,33 @@ def vamp_gauss_test(nz=100,ny=200,ns=10, snr=30, map_est=False, verbose=False,\
         
     
     # Compute the true costs for the estimators
+    rvar1 = np.mean(solver.rvar1)
+    rvar2 = np.mean(solver.rvar2)
     r = np.minimum(ny,nz)  # number of singular values
     d = 1/(zvar0*(s**2) + wvar)
     cost1 = np.sum(np.abs(zhat-zmean0)**2)/zvar0 +\
-            np.sum(np.abs(zhat-solver.r1)**2)/solver.rvar1
+            np.sum(np.abs(zhat-solver.r1)**2)/rvar1
     cost2 = np.sum(np.abs(y-A.dot(zhat))**2)/wvar +\
-            np.sum(np.abs(zhat-solver.r2)**2)/solver.rvar2        
+            np.sum(np.abs(zhat-solver.r2)**2)/rvar2
         
     if  map_est:        
         cost1 += ns*nz*np.log(2*np.pi*zvar0)
         cost2 += ns*ny*np.log(2*np.pi*wvar)
     else:
-        cost1 += ns*nz*np.sum(np.log((zvar0+solver.rvar1)/solver.rvar1))
+        cost1 += ns*nz*np.sum(np.log((zvar0+rvar1)/rvar1))
         cost2 += - ns*r*np.mean(np.log(zvar0*d)) +\
                  (ny-r)*ns*np.log(2*np.pi*wvar) - (nz-r)*ns*np.log(2*np.pi*zvar0)
                  
     # Compute the true variance costs
-    v1 = np.sum(np.abs(zhat-solver.r1)**2)/solver.rvar1         
-    v2 = np.sum(np.abs(zhat-solver.r2)**2)/solver.rvar2
+    v1 = np.sum(np.abs(zhat-solver.r1)**2)/rvar1         
+    v2 = np.sum(np.abs(zhat-solver.r2)**2)/rvar2
          
     if map_est:
         Hgauss = 0
     else:
-        v1 += nz*ns*np.mean(solver.zvar1)/solver.rvar1
-        v2 += nz*ns*np.mean(solver.zvar2)/solver.rvar2
-        Hgauss = ns*nz*(1+np.log(2*np.pi*solver.zvar1))
+        v1 += nz*ns*np.mean(solver.zvar1)/rvar1
+        v2 += nz*ns*np.mean(solver.zvar2)/rvar2
+        Hgauss = ns*nz*(1+np.log(2*np.pi*np.mean(solver.zvar1)))
          
     # Compute total costs            
     cost_tota = cost1 + cost2 - v1 - v2 + Hgauss

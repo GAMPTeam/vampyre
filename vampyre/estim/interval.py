@@ -32,7 +32,7 @@ class HardThreshEst(Estim):
     :param perr:  error probability (default = 1e-6)
     :param var_init:  initial variance.  This should be large (default=100)
     """    
-    def __init__(self,y,shape,zrep_axes='all',thresh=0,perr=1e-6,\
+    def __init__(self,y,shape,zrep_axes=(0,),thresh=0,perr=1e-6,\
                  var_init=np.Inf):
         
         Estim.__init__(self)
@@ -162,7 +162,7 @@ def hard_thresh_test(zshape=(1000,10), verbose=False, rvar=None, tol=0.1):
     y = (z > thresh)
     
     # Create estimator
-    est = HardThreshEst(y,shape=zshape,thresh=thresh)
+    est = HardThreshEst(y,shape=zshape,thresh=thresh,zrep_axes='all')
     
     # Run the initial estimate.  In this case, we just check that the 
     # dimensions match

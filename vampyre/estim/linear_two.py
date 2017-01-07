@@ -45,7 +45,7 @@ class LinEstimTwo(Estim):
        include the axis in which :code:`A` operates.
     """    
     def __init__(self,A,b,wvar=0,\
-                 z1rep_axes='all', z0rep_axes='all',wrep_axes='all',\
+                 z1rep_axes=(0,), z0rep_axes=(0,),wrep_axes='all',\
                  map_est=False,is_complex=False):
         
         Estim.__init__(self)
@@ -376,7 +376,8 @@ def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,tol=1e-8):
         
     # Create linear estimator class
     Aop = trans.MatrixLT(A,zshape0)
-    est = LinEstimTwo(Aop,b,wvar=wvar,map_est=map_est)
+    est = LinEstimTwo(Aop,b,wvar=wvar,map_est=map_est,z1rep_axes='all',\
+                      z0rep_axes='all')
     
     # Pack the variables
     r = [r0,r1]

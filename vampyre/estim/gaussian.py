@@ -25,7 +25,7 @@ class GaussEst(Estim):
         or MMSE estimation. This is used for the cost computation.
     """    
     def __init__(self, zmean, zvar, shape, 
-                 var_axes = 'all', zmean_axes='all',
+                 var_axes = (0,), zmean_axes='all',
                  is_complex=False, map_est=False):
         Estim.__init__(self)
         self.zmean = zmean
@@ -42,6 +42,16 @@ class GaussEst(Estim):
             self.var_axes = tuple(range(ndim))        
         if self.zmean_axes == 'all':
             self.zmean_axes = tuple(range(ndim))
+            
+        # If zvar is a scalar, then repeat it to the required shape,
+        # which are all the dimensions not being averaged over
+        if np.isscalar(self.zvar):
+            ndim = len(self.shape)
+            axes_spec = [i for i in range(ndim) if i not in self.var_axes]
+            if axes_spec != []:
+                shape1 = tuple(np.array(self.shape)[axes_spec])
+                self.zvar = np.tile(self.zvar, shape1)
+        
                  
         
     def est_init(self, return_cost=False, avg_var_cost=True):
@@ -168,7 +178,7 @@ def gauss_test(zshape=(1000,10), verbose=False, tol=0.1):
     r = z + np.random.normal(0,np.sqrt(rvar),zshape)
     
     # Construct estimator
-    est = GaussEst(zmean,zvar,zshape)
+    est = GaussEst(zmean,zvar,zshape,var_axes='all')
 
     # Inital estimate
     zmean1, zvar1 = est.est_init()

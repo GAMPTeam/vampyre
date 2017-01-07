@@ -43,7 +43,7 @@ class LinEstim(Estim):
        include the axis in which :code:`A` operates.
     """    
     def __init__(self,A,y,wvar=0,\
-                 wrep_axes='all', zrep_axes='all',map_est=False,\
+                 wrep_axes='all', zrep_axes=(0,),map_est=False,\
                  is_complex=False):
         
         Estim.__init__(self)
@@ -251,7 +251,7 @@ def lin_test(zshape=(500,10),Ashape=(1000,500),verbose=False,tol=0.1):
     y = A.dot(z) + np.random.normal(0,np.sqrt(wvar),yshape)
     
     # Construct the linear estimator
-    est = LinEstim(Aop,y,wvar)
+    est = LinEstim(Aop,y,wvar,zrep_axes='all')
     
     # Perform the initial estimate.  This is just run to make sure it
     # doesn't crash
