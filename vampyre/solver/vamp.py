@@ -1,3 +1,6 @@
+"""
+vamp.py:  Main VAMP solver
+"""
 # Import general packages
 import numpy as np
 import time
@@ -84,7 +87,7 @@ class Vamp(Solver):
             
             # Variance cost
             if self.comp_cost:
-                self.var_cost2 = self.msg_hdl.cost(z2,r2,zvar2,rvar2)
+                self.var_cost2 = self.msg_hdl.cost(z2,zvar2,r2,rvar2)
             
             # Msg passing to est 1
             r1, rvar1 = self.msg_hdl.msg_sub(z2,zvar2,r2,rvar2,self.r1,self.rvar1)
@@ -103,7 +106,7 @@ class Vamp(Solver):
             self.zvar1 = zvar1
             self.cost1 = cost1            
             if self.comp_cost:
-                self.var_cost1 = self.msg_hdl.cost(z1,r1,zvar1,rvar1)
+                self.var_cost1 = self.msg_hdl.cost(z1,zvar1,r2,rvar1)
                 
             # Also store the estimates as zhat and zhatvar to avoid the
             # confusing names, z1, zvar1
@@ -112,8 +115,6 @@ class Vamp(Solver):
             
             # Msg passing to est 2
             r2, rvar2 = self.msg_hdl.msg_sub(z1,zvar1,r1,rvar1,self.r2,self.rvar2)
-            self.r2 = r2
-            self.rvar2 = rvar2
                                 
             # Compute total cost
             if self.comp_cost:
@@ -124,6 +125,9 @@ class Vamp(Solver):
             
             # Save history
             self.save_hist()
+            self.r2 = r2
+            self.rvar2 = rvar2
+        
             
 def vamp_gauss_test(nz=100,ny=200,ns=10, snr=30, map_est=False, verbose=False,\
     is_complex=False, tol=1e-5):

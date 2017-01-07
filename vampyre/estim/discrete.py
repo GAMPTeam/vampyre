@@ -100,6 +100,10 @@ class DiscreteEst(Estim):
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior 
         mean, variance and optional cost.
         """
+        # Infinite variance case
+        if np.any(rvar==np.Inf):
+            return self.est_init(return_cost, avg_var_cost)
+     
         
         # Convert to 1D vectors        
         r1 = r.ravel()
@@ -200,9 +204,10 @@ def discrete_test(zshape=(1000,10), verbose=False, nvals=3,\
     
     # Measure error
     zerr = np.mean(np.abs(zhat-z)**2)
-    if verbose:
+    fail = (np.abs(zerr-zhatvar) > tol_est*np.abs(zerr))
+    if verbose or fail:
         print("err: true: {0:12.4e} est: {1:12.4e}".format(zerr,zhatvar) )
-    if (np.abs(zerr-zhatvar) > tol_est*np.abs(zerr)):
+    if fail:
         raise common.TestException("Posterior estimate discrete error "+ 
            "does not match predicted value")
 

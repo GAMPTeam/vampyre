@@ -44,7 +44,7 @@ class MsgHdl(object):
         """
         raise NotImplementedError()
         
-    def cost(self,z,r,zvar,rvar):
+    def cost(self,z,zvar,r,rvar):
         """
         Computes the Gaussian cost in belief propagation.
         
@@ -96,6 +96,8 @@ class MsgHdlSimp(MsgHdl):
     :param alpha_max:  Maximum value for :math:`\\alpha` above
     :param damp:  Damping constant.  :code:`damp=1` implies no
        damping.
+    :param damp_lim:  Damping will not be performed if 
+        :code:`rvar1_prev > damp_lim`
     :param rep_axes:  The axes on which the variance is to be repeated.
        Default :code:`rep_axes=[]` implies the variance is not repeated.
     :param shape:  Shape of the estimation object on which the variance is 
@@ -104,11 +106,12 @@ class MsgHdlSimp(MsgHdl):
     :param Boolean is_compelx:  If the estimation is MAP or MMSE
     """
     def __init__(self, alpha_min=1e-5, alpha_max=1-1e-5, damp=0.95, rep_axes=[],\
-                 shape = [], is_complex=False, map_est=True):
+                 shape = [], is_complex=False, map_est=True, damp_lim=1e6):
         MsgHdl.__init__(self)
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.damp = damp
+        self.damp_lim = damp_lim
         self.rep_axes = rep_axes
         self.is_complex = is_complex
         self.map_est = map_est
@@ -130,6 +133,23 @@ class MsgHdlSimp(MsgHdl):
         :param rvar1_prev:  Previous variance of the msg from the factor node.    
         """
         
+        # Check the infinite variance case
+        if np.any(rvar0 == np.Inf):
+            r1 = z
+            rvar1 = zvar
+            return r1, rvar1
+            
+        # Return infinite variance (i.e. non-informative data) if the variance
+        # did not sufficiently decrease
+        alpha = zvar/rvar0
+        if np.any(alpha >= self.alpha_max):
+            if np.isscalar(rvar0):
+                rvar1 = np.Inf
+            else:
+                rvar1 = np.Inf*np.ones(rvar0.shape)
+            r1 = z
+            return r1, rvar1
+        
         # Threshold the decrease in variance
         alpha = zvar/rvar0
         alpha = np.maximum(self.alpha_min, alpha)
@@ -140,14 +160,14 @@ class MsgHdlSimp(MsgHdl):
         r1 = (z-alpha*r0)/(1-alpha)
         
         # Apply the damping
-        if (r1_prev != []) and (self.damp < 1):
-            r1 = self.damp*r1 + (1-self.damp)*r1_prev
-        if (rvar1_prev != []) and (self.damp < 1):
-            rvar1 = self.damp*rvar1 + (1-self.damp)*rvar1_prev
+        if (r1_prev != []) and (rvar1_prev != []) and (self.damp < 1):
+            if np.all(rvar1_prev < self.damp_lim):
+                r1 = self.damp*r1 + (1-self.damp)*r1_prev
+                rvar1 = self.damp*rvar1 + (1-self.damp)*rvar1_prev
                 
         return r1, rvar1
         
-    def cost(self,z,r,zvar,rvar):
+    def cost(self,z,zvar,r,rvar):
         """
         Computes the Gaussian cost in belief propagation.
         
@@ -250,7 +270,7 @@ class ListMsgHdl(MsgHdl):
                 
         return r1, rvar1
         
-    def cost(self,z,r,zvar,rvar):
+    def cost(self,z,zvar,r,rvar):
         """
         Computes the Gaussian cost in belief propagation.
         
@@ -275,7 +295,7 @@ class ListMsgHdl(MsgHdl):
             zvari = zvar[i]            
             
             # Call the message handler
-            ci = hdl.cost(zi,ri,zvari,rvari)
+            ci = hdl.cost(zi,zvari,ri,rvari)
             
             # Add to the cost
             cost += ci

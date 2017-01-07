@@ -1,8 +1,18 @@
+"""
+mixture.py:  Classes for estimators for mixture distributions
+"""
+
+# Import general packages
 import numpy as np
-from vampyre.common.utils import repeat_axes, repeat_sum, VpException
-from vampyre.common.utils import VpException, TestException
+import copy
+
+# Import other sub-packages
+import vampyre.common as common
+
+# Import methods and classes from the same sub-package
 from vampyre.estim.base import Estim
 from vampyre.estim.gaussian import GaussEst
+
 
 class MixEst(Estim):
     """ Mixture estimator class
@@ -37,7 +47,7 @@ class MixEst(Estim):
         # Check that all estimators have cost available
         for est in est_list:
             if not est.cost_avail:
-                raise VpException(\
+                raise common.VpException(\
                     "Estimators in a mixture distribution"+\
                     "must have cost_avail==True")
         self.cost_avail = True
@@ -56,14 +66,13 @@ class MixEst(Estim):
         """       
         
         # Get the mean and variance of each component
-        ncomp = len(self.w)
         zmean_list = []
         zvar_list = []
         cost_list = []
         for i,est in enumerate(self.est_list):
-            zmeani, zvari, ci = est.est_init(return_cost=True)
+            zmeani, zvari, ci = est.est_init(return_cost=True,avg_var_cost=False)
             zmean_list.append(zmeani)
-            zvari = repeat_axes(zvari,self.shape,self.var_axes)
+            #zvari = repeat_axes(zvari,self.shape,self.var_axes)
             zvar_list.append(zvari)
             cost_list.append(ci)
             
@@ -85,7 +94,6 @@ class MixEst(Estim):
         mean, variance and optional cost.
         """
          # Get the mean and variance of each component
-        ncomp = len(self.w)
         zmean_list = []
         zvar_list = []
         cost_list = []
@@ -93,10 +101,9 @@ class MixEst(Estim):
             zmeani, zvari, ci = \
                est.est(r,rvar,return_cost=True,avg_var_cost=False)
             zmean_list.append(zmeani)
-            #zvari = repeat_axes(zvari,self.shape,self.var_axes)
             zvar_list.append(zvari)
             cost_list.append(ci)
-            
+          
         return self._comp_est(zmean_list,zvar_list,cost_list,return_cost)
         
     def _comp_est(self,zmean_list,zvar_list,cost_list,return_cost):
@@ -115,7 +122,7 @@ class MixEst(Estim):
         # Find the minimum cost.  This will be subtracted from all the costs
         # to prevent overflow when taking an exponential
         ncomp = len(self.w)
-        cmin = cost_list[0]
+        cmin = copy.deepcopy(cost_list[0])
         for i in range(1,ncomp):
             cmin = np.minimum(cmin, cost_list[i])
             
@@ -206,7 +213,7 @@ def mix_test(zshape=(1000,10), verbose=False, tol=0.1, raise_exception=True):
     if verbose:
         print("Initial:    True: {0:f} Est:{1:f}".format(zerr1,zvar1))
     if (np.abs(zerr1-zvar1) > tol*np.abs(zerr1)) and raise_exception:
-        raise TestException("Initial estimate GMM error "+ 
+        raise common.TestException("Initial estimate GMM error "+ 
            " does not match predicted value")
     
     # Posterior estimate
@@ -215,6 +222,6 @@ def mix_test(zshape=(1000,10), verbose=False, tol=0.1, raise_exception=True):
     if verbose:
         print("Posterior:  True: {0:f} Est:{1:f}".format(zerr,zhatvar))
     if (np.abs(zerr-zhatvar) > tol*np.abs(zerr)) and raise_exception:
-        raise TestException("Posterior estimate GMM error "+ 
+        raise common.TestException("Posterior estimate GMM error "+ 
            " does not match predicted value")
 

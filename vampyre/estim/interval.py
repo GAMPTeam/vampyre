@@ -32,7 +32,8 @@ class HardThreshEst(Estim):
     :param perr:  error probability (default = 1e-6)
     :param var_init:  initial variance.  This should be large (default=100)
     """    
-    def __init__(self,y,shape,zrep_axes='all',thresh=0,perr=1e-6,var_init=100):
+    def __init__(self,y,shape,zrep_axes='all',thresh=0,perr=1e-6,\
+                 var_init=np.Inf):
         
         Estim.__init__(self)
         self.y = y
@@ -120,7 +121,7 @@ class HardThreshEst(Estim):
         # Compute posterior mean and variance
         zhat = A1/A0
         zhatvar = A2/A0-(zhat**2)
-        cost = -np.log(A0)
+        cost = -np.sum(np.log(A0))
         
         # Reshape and average values
         zhat = np.reshape(zhat,self.shape)

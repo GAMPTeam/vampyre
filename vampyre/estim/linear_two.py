@@ -58,8 +58,8 @@ class LinEstimTwo(Estim):
         
         # Initial variance.  This is large value since the quantities
         # are underdetermined
-        self.zvar0_init = 1e8
-        self.zvar1_init = 1e8
+        self.zvar0_init = np.Inf
+        self.zvar1_init = np.Inf
         
         # Get the input and output shape
         self.shape0 = A.shape0        
@@ -160,6 +160,7 @@ class LinEstimTwo(Estim):
         r0, r1 = r
         rvar0, rvar1 = rvar
         
+        
         # Get the diagonal parameters
         s, sshape, srep_axes = self.A.get_svd_diag()        
         
@@ -209,6 +210,22 @@ class LinEstimTwo(Estim):
         Hence 
            qhat = E(q) = qbar - [-rvar0*s,rvar1]*d*(qbar1-s*qbar0-bt)        
         """
+        
+        # Infinite variance case
+        if np.any(rvar1 == np.Inf):
+            zhat0 = r0
+            zhatvar0 = rvar0
+            zhat1 = self.A.dot(r0) + self.b
+            qvar1 = np.mean(np.abs(s_rep)**2*rvar0_rep+wvar_rep,self.z1rep_axes)
+            zhatvar1 = ns/nz1*qvar1 + (1-ns/nz1)*self.wvar
+            cost = 0  # FIX THIS
+            zhat = [zhat0,zhat1]
+            zhatvar = [zhatvar0,zhatvar1]
+            if return_cost:
+                return zhat,zhatvar, cost
+            else:
+                return zhat,zhatvar                    
+        
         
         # Compute the offset terms
         qbar0 = self.A.VsvdH(r0)

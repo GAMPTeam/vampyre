@@ -24,10 +24,11 @@ def test_version():
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\
        ['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
-       ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
        ['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
        ['estim.interval.gauss_integral_test',vp.estim.interval.gauss_integral_test],\
        ['estim.interval.hard_thresh_test',vp.estim.interval.hard_thresh_test],\
+       ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
+       ['solver.mlvamp.mlvamp_probit_test',vp.solver.mlvamp.mlvamp_probit_test],\
        ['vamp_sparse_test.sparse_inv',vamp_sparse_test.sparse_inv]\
     ]
     

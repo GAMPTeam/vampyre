@@ -29,7 +29,7 @@ class GaussEst(Estim):
                  is_complex=False, map_est=False):
         Estim.__init__(self)
         self.zmean = zmean
-        self.zvar = zvar        
+        self.zvar = zvar
         self.cost_avail = True  
         self.is_complex = is_complex  
         self.map_est = map_est         
@@ -95,6 +95,11 @@ class GaussEst(Estim):
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior
             mean, variance and optional cost.
         """
+        
+        # Infinite variance case
+        if np.any(rvar==np.Inf):
+            return self.est_init(return_cost, avg_var_cost)
+                    
         zhatvar = rvar*self.zvar/(rvar + self.zvar)
         gain = self.zvar/(rvar + self.zvar)
         gain = repeat_axes(gain,self.shape,self.var_axes,rep=False) 

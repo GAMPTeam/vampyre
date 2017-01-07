@@ -5,7 +5,7 @@ vamp_sparse_test.py:  tests for VAMP for sparse recovery
 import vampyre as vp
 import numpy as np
                    
-def sparse_inv(nz=1000,ny=500,ns=10, snr=30, verbose=False, mse_tol=-29):    
+def sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29):    
     """
     Test VAMP on a sparse inverse problem
     

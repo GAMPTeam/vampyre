@@ -115,7 +115,7 @@ class LinEstim(Estim):
 
         # Compute the estimate within the transformed space
         q = (1/s1)*self.p
-        qvar = wvar1/(s1**2)
+        qvar = wvar1/(np.abs(s1)**2)
         qvar_mean = np.mean(qvar, axis=self.zrep_axes)
         
         rdim = np.product(sshape)/np.product(shape0)
@@ -174,12 +174,12 @@ class LinEstim(Estim):
 
         # Compute the estimate within the transformed space
         qbar = self.A.VsvdH(r)
-        d = 1/(rvar1*(s1**2) + wvar1)
-        q = d*(rvar1*s1*self.p + wvar1*qbar) - qbar
+        d = 1/(rvar1*(np.abs(s1)**2) + wvar1)
+        q = d*(rvar1*s1.conj()*self.p + wvar1*qbar)
         qvar = rvar1*wvar1*d
         qvar_mean = np.mean(qvar, axis=self.zrep_axes)
         
-        zhat = self.A.Vsvd(q) + r
+        zhat = self.A.Vsvd(q - qbar) + r
         zhatvar = ns/nz*qvar_mean + (1-ns/nz)*rvar     
         
         # Exit if cost does not need to be computed
