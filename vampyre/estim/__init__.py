@@ -8,5 +8,6 @@ from vampyre.estim.msg import MsgHdl, MsgHdlSimp, ListMsgHdl
 from vampyre.estim.discrete import DiscreteEst
 from vampyre.estim.interval import HardThreshEst
 from vampyre.estim.stack import StackEstim
+from vampyre.estim.relu import ReLUEstim
 
 

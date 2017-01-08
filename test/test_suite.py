@@ -27,6 +27,7 @@ def test_version():
        ['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
        ['estim.interval.gauss_integral_test',vp.estim.interval.gauss_integral_test],\
        ['estim.interval.hard_thresh_test',vp.estim.interval.hard_thresh_test],\
+       ['estim.relu.relu_test',vp.estim.relu.relu_test],\
        ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
        ['solver.mlvamp.mlvamp_probit_test',vp.solver.mlvamp.mlvamp_probit_test],\
        ['vamp_sparse_test.sparse_inv',vamp_sparse_test.sparse_inv]\
@@ -38,12 +39,13 @@ def test_version():
         name = test[0]
         fn = test[1]
         cnt += 1
+        print("{0:40s} ".format(name),end="")
         try:
             fn()
-            print("{0:40s} Pass".format(name))
+            print("Pass")
             cnt_pass += 1
         except vp.common.utils.TestException as err:
-            print("{0:40s} Fail".format(name))
+            print("Fail")
             print("   "+err.msg)
     
     print("{0:d} out of {1:d} passed".format(cnt_pass,cnt))
