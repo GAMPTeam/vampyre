@@ -71,7 +71,8 @@ class HardThreshEst(Estim):
         if zvar_ind == []:
             zvar = self.var_init
         else:
-            zvar_shape = self.shape[zvar_ind]        
+            zvar_shape = np.array(self.shape)[zvar_ind]
+            zvar_shape = tuple(zvar_shape)        
             zvar = self.var_init*np.ones(zvar_shape)
         cost = 0
         if return_cost:

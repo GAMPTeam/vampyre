@@ -110,7 +110,7 @@ class LinEstim(Estim):
         shape0 = self.A.shape0
         
         # Reshape the variances to the transformed space
-        s1    = common.repeat_axes(s, sshape, srep_axes, rep=False)
+        s1    = common.repeat_axes(s, sshape, srep_axes)
         wvar1 = common.repeat_axes(self.wvar, sshape, self.wrep_axes, rep=False)
 
         # Compute the estimate within the transformed space

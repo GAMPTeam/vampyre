@@ -232,7 +232,7 @@ class MLVamp(Solver):
                - np.sum(self.msg_cost_rev) + np.sum(self.Hgauss)
                
                
-    def solver(self,init=True):
+    def solve(self,init=True):
         """
         Main iterative solving routine using the forward-backward algorithm.
         
@@ -338,7 +338,7 @@ def mlvamp_probit_test(nz0=512,nz1=4096,ns=1,snr=40,verbose=False,\
         hist_list=['zhat','zhatvar','cost'])
     
     # Run the solver
-    solver.solver()
+    solver.solve()
     
     # Compute the predicted and true MSE
     zhat = solver.hist_dict['zhat']

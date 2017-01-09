@@ -23,6 +23,7 @@ class ReLUEstim(Estim):
     :param z1rep_axes:  axes on which the variance for :math:`z_1` is averaged
     """        
     def __init__(self,shape,z0rep_axes=(0,), z1rep_axes=(0,)):
+        Estim.__init__(self)
         self.shape = shape
         ndim = len(shape)
         if z0rep_axes == 'all':
@@ -31,8 +32,13 @@ class ReLUEstim(Estim):
             z1rep_axes = tuple(range(ndim))            
         self.z0rep_axes = z0rep_axes
         self.z1rep_axes = z1rep_axes
+        self.cost_avail = True
+        
+        # Initial variances
+        self.zvar0_init= np.Inf
+        self.zvar1_init= np.Inf
     
-    def estim_init(self,return_cost=False):
+    def est_init(self,return_cost=False):
         """
         Initial estimator.
         
@@ -47,7 +53,24 @@ class ReLUEstim(Estim):
         zhat0   = np.zeros(self.shape)
         zhat1   = np.zeros(self.shape)
         zhat    = [zhat0,zhat1]
-        zvar = [np.Inf, np.Inf]
+     
+        # Compute the shapes for the variance and set the initial value of
+        # the variance according to the shape
+        ndim = len(self.shape)
+        axes_spec = [i for i in range(ndim) if i not in self.z0rep_axes]
+        if axes_spec == []:
+            zvar0 = self.zvar0_init
+        else:
+            shape1 = tuple(np.array(self.shape)[axes_spec])
+            zvar0 = np.tile(self.zvar0_init, shape1)
+        axes_spec = [i for i in range(ndim) if i not in self.z1rep_axes]
+        if axes_spec == []:
+            zvar1 = self.zvar1_init
+        else:
+            shape1 = tuple(np.array(self.shape)[axes_spec])
+            zvar1 = np.tile(self.zvar1_init, shape1)            
+        zvar = [zvar0,zvar1]
+
         cost = 0
         if return_cost:
             return zhat, zvar, cost
