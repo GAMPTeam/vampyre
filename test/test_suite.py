@@ -9,7 +9,7 @@ vp_path = os.path.abspath('../')
 if not vp_path in sys.path:
     sys.path.append(vp_path)
 
-sys.path.append(os.path.abspath('./sparse'))
+sys.path.append(os.path.abspath('./test/sparse'))
 import vampyre as vp
 import vamp_sparse_test
 
@@ -39,7 +39,7 @@ def test_version():
         name = test[0]
         fn = test[1]
         cnt += 1
-        print("{0:40s} ".format(name),end="")
+        sys.stdout.write("{0:40s} ".format(name))
         try:
             fn()
             print("Pass")

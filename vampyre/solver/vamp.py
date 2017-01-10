@@ -1,3 +1,4 @@
+from __future__ import division
 """
 vamp.py:  Main VAMP solver
 """

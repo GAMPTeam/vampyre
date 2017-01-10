@@ -1,3 +1,4 @@
+from __future__ import division
 """
 mlvamp.py:  Multi-layer VAMP solver and test routines
 """

@@ -1,3 +1,4 @@
+from __future__ import division
 """
 vamp_sparse_test.py:  tests for VAMP for sparse recovery
 """
