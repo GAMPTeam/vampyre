@@ -16,7 +16,7 @@ Subsequently, the package can be installed via `pip` with the `-e` directive to 
 
 ```bash
 > cd /path/to/vampyre
-> pip install -e .
+> pip install -e .  # or with the '--user' option to install it unprivileged
 ```
 
 Voilà.
