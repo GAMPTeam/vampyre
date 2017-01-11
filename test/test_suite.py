@@ -5,11 +5,13 @@
 # Add the path to the vampyre module and then load the module
 import sys
 import os
-vp_path = os.path.abspath('../')
-if not vp_path in sys.path:
-    sys.path.append(vp_path)
 
-sys.path.append(os.path.abspath('./test/sparse'))
+# ensure some directories are in our PYTHONPATH, ( relative to test dir)
+for d in ('.','..','sparse'):
+    fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
+    if not fd in sys.path:
+        sys.path.append(fd)
+
 import vampyre as vp
 import vamp_sparse_test
 
