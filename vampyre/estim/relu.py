@@ -167,7 +167,7 @@ class ReLUEstim(Estim):
         cost = -nz*(Amax - np.mean(np.log(zp[0] + zn[0])))
         return zhat, zhatvar, cost
 
-def relu_test(zshape=(1000,10),tol=0.1,verbose=False):
+def relu_test(zshape=(1000,10),tol=0.15,verbose=False):
     """
     ReLUEstim unit test.
     
@@ -220,11 +220,12 @@ def relu_test(zshape=(1000,10),tol=0.1,verbose=False):
     # Check if fails
     fail = (diff0 > tol) or (diff1 > tol)    
     if verbose or fail:
+        print("")
         print("z0 err: act: {0:12.4e} pred: {1:12.4e} diff: {2:12.4e}".format(\
             np.mean(zerr0),np.mean(zhatvar0),diff0))
         print("z1 err: act: {0:12.4e} pred: {1:12.4e} diff: {2:12.4e}".format(\
             np.mean(zerr1),np.mean(zhatvar1),diff1)) 
     if fail:
-        common.TestException("Posterior predicted variance does not match "+\
+        raise common.TestException("Posterior predicted variance does not match "+\
             "actual variance within tolerance")
     
