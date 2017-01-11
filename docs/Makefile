@@ -46,15 +46,15 @@ help:
 
 .PHONY: clean
 clean:
-    rm -f vampyre*rst
-    rm -rf $(BUILDDIR)/*
+	rm -f vampyre*rst
+	rm -rf $(BUILDDIR)/*
 
 .PHONY: html
 html:
-    sphinx-apidoc  -o . ..\vampyre\
-    $(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
-    @echo
-    @echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+	sphinx-apidoc  -o . ../vampyre/
+	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	@echo
+	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
 .PHONY: dirhtml
 dirhtml:
