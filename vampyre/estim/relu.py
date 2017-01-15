@@ -109,8 +109,8 @@ class ReLUEstim(Estim):
            
         First, we complete the squares and write:
         
-           qp(z0) = exp(Amax)*Cp*exp(-(z0-rp)^2/(2*zvarp))/sqrt(2*pi*zvarp)  
-           qn(z0) = exp(Amax)*Cn*exp(-(z0-rn)^2/(2*zvarn))/sqrt(2*pi*zvarn)        
+           qp(z0) = exp(Amax)*Cp*exp(-(z0-rp)^2/(2*zvarp))/sqrt(2*pi)  
+           qn(z0) = exp(Amax)*Cn*exp(-(z0-rn)^2/(2*zvarn))/sqrt(2*pi)        
            
         """
                  
@@ -121,22 +121,34 @@ class ReLUEstim(Estim):
         # Reshape the variances
         rvar0 = common.repeat_axes(rvar0,self.shape,self.z0rep_axes)
         rvar1 = common.repeat_axes(rvar1,self.shape,self.z1rep_axes)
-                 
-        # Compute the conditional Gaussian terms for z > 0 and z < 0
-        zvarp = rvar0*rvar1/(rvar0+rvar1)
-        zvarn = rvar0
-        rp = (rvar1*r0 + rvar0*r1)/(rvar0+rvar1)        
-        rn = r0
-
-        # Compute scaling constants for each region
-        Ap = 0.5*((rp**2)/zvarp - (r0**2)/rvar0 - (r1**2)/rvar1)
-        An = 0.5*(-(r1**2)/rvar1 + np.log(zvarn))
-        Amax = np.maximum(Ap,An)
-        Ap = Ap - Amax
-        An = An - Amax
-        Cp = np.exp(Ap)
-        Cn = np.exp(An)
+        
+        if np.any(rvar1 == np.Inf):
+            # Infinite variance case.
+            zvarp = rvar0
+            zvarn = rvar0
+            rp = r0
+            rn = r0
+            Cp = 1
+            Cn = 1
+            Amax = 0
                         
+        else:
+                             
+            # Compute the conditional Gaussian terms for z > 0 and z < 0
+            zvarp = rvar0*rvar1/(rvar0+rvar1)
+            zvarn = rvar0
+            rp = (rvar1*r0 + rvar0*r1)/(rvar0+rvar1)        
+            rn = r0
+    
+            # Compute scaling constants for each region
+            Ap = 0.5*((rp**2)/zvarp - (r0**2)/rvar0 - (r1**2)/rvar1)
+            An = 0.5*(-(r1**2)/rvar1)
+            Amax = np.maximum(Ap,An)
+            Ap = Ap - Amax
+            An = An - Amax
+            Cp = np.exp(Ap)
+            Cn = np.exp(An)
+                            
         # Compute moments for each region
         zp = Cp*gauss_integral(0, np.Inf, rp, zvarp)
         zn = Cn*gauss_integral(-np.Inf, 0, rn, zvarn)
