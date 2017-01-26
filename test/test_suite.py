@@ -20,7 +20,6 @@ def test_version():
     
     # Unit tests
     tests = [\
-       ['estim.gaussian.gauss_test', vp.estim.gaussian.gauss_test],\
        ['estim.mixture.mix_test', vp.estim.mixture.mix_test],\
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\

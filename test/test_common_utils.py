@@ -5,16 +5,13 @@
 """
 import numpy as np
 from vampyre.common.utils import TestException
-from vampyre.common.utils import repeat_axes
+from vampyre.common.utils import repeat_axes, repeat_sum
 
-def test_repeat_axes(verbose=False, tol=1e-8):
+def test_repeat_axes(tol=1e-8):
     """
-    Unit test for the repeat_mult function.
+    test_repeat_axes() [vampyre.common.utils.repeat_axes]
 
-    :param Boolean verbose:  Print test results    
-    :param tol:  Tolerance for passing test
-    :param Boolean raise_exception:  Raises an error on test failure.  This 
-        can be caught in the unit test dispatcher.
+    :param tol:  Tolerance for passing test.
     """    
     ushape = (2, 2, 3)
     rep_axes = (1, 2)
@@ -28,9 +25,8 @@ def test_repeat_axes(verbose=False, tol=1e-8):
         sum0 = np.sum(u[i, :, :])
         sum1 = np.sum(urep[i, :, :])
         difference += np.abs(sum1-sum0)
-    if verbose:
-        print("total diff= {0:f}".format(difference))
+    
+    # print("\n[test_repeat_axes] Difference in sums: {0:f}".format(difference))
                 
-    if (difference > tol):
-        raise TestException("Sum along repeated matrix is not conistent")
-
+    if difference > tol:
+        raise TestException("[test_repeat_axes] Sum along repeated matrix is not conistent.")
