@@ -98,3 +98,6 @@ ENV/
 # Developer Environments
 *.sublime-workspace
 *.sublime-project
+
+# Mac OS
+.DS_Store
