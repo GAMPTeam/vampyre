@@ -20,7 +20,6 @@ def test_version():
     
     # Unit tests
     tests = [\
-       ['common.utils.repeat_test', vp.common.utils.repeat_test], \
        ['estim.gaussian.gauss_test', vp.estim.gaussian.gauss_test],\
        ['estim.mixture.mix_test', vp.estim.mixture.mix_test],\
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
@@ -53,5 +52,5 @@ def test_version():
     print("{0:d} out of {1:d} passed".format(cnt_pass,cnt))
             
                 
-if __name__ == "__main__":
-    test_version()
+# if __name__ == "__main__":
+#     test_version()
