@@ -60,8 +60,12 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
+# Sphinx documentation... 
+# We want to retain the hand-written upper-level files, but we don't want to
+# commit the auto-generated *.rst files.
 docs/_build/
+docs/vampyre*.rst
+docs/modules.rst
 
 # PyBuilder
 target/
