@@ -12,8 +12,6 @@ from vampyre.estim.gaussian import GaussEst
 
 def test_gauss_est(zshape=(1000,10), verbose=False, tol=0.1):
     """
-
-    
     test_gauss_est [vampyre.estim.gaussian.GaussEst]
 
     Unit test for the Gaussian estimator class :class:`GaussEst`.
