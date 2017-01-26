@@ -1,6 +1,8 @@
 """
 linear_two.py:  Estimation for general linear constraints with Gaussian noise.
 """
+from __future__ import division
+
 import numpy as np
 
 # Import other subpackages in vampyre

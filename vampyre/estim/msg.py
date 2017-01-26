@@ -1,6 +1,9 @@
 """
 msg.py:  Basic classes for message passing
 """
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
 
 # Import other sub-packages
@@ -118,7 +121,7 @@ class MsgHdlSimp(MsgHdl):
         self.shape = shape
             
 
-    def msg_sub(self,z,zvar,r0,rvar0,r1_prev=[],rvar1_prev=[]):
+    def msg_sub(self,z,zvar,r0,rvar0,r1_prev=None,rvar1_prev=None):
         """
         Variance subtraction for message passing
         
@@ -160,7 +163,7 @@ class MsgHdlSimp(MsgHdl):
         r1 = (z-alpha*r0)/(1-alpha)
         
         # Apply the damping
-        if (r1_prev != []) and (rvar1_prev != []) and (self.damp < 1):
+        if not (r1_prev is None) and not (rvar1_prev is None) and (self.damp < 1):
             if np.all(rvar1_prev < self.damp_lim):
                 r1 = self.damp*r1 + (1-self.damp)*r1_prev
                 rvar1 = self.damp*rvar1 + (1-self.damp)*rvar1_prev

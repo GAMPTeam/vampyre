@@ -1,3 +1,9 @@
+"""
+gaussian.py:  Classes for Gaussian estimation
+"""
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
 from vampyre.common.utils import repeat_axes, repeat_sum
 from vampyre.common.utils import TestException

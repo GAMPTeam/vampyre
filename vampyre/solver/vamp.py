@@ -1,7 +1,8 @@
-from __future__ import division
 """
 vamp.py:  Main VAMP solver
 """
+from __future__ import division
+
 # Import general packages
 import numpy as np
 import time

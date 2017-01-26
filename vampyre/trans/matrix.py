@@ -1,3 +1,8 @@
+"""
+matrix.py:  Linear transforms based on a matrix
+"""
+from __future__ import division
+
 import numpy as np
 from vampyre.trans.base import LinTrans
 from vampyre.common.utils import repeat_axes
