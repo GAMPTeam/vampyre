@@ -69,7 +69,7 @@ class Vamp(Solver):
         self.rvar2 = rvar2
         self.cost1 = cost1
         self.r1 = []
-        self.rvar1 = []
+        self.rvar1 = None
         self.var_cost1 = 0
         self.var_cost2 = 0
         self.cost = 0
