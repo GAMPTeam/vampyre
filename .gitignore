@@ -94,3 +94,7 @@ ENV/
 
 # temp swap files
 .*.swp
+
+# Developer Environments
+*.sublime-workspace
+*.sublime-project
