@@ -1,91 +1,10 @@
-os:
-  - linux
-  - osx
+language: python
+python:
+    - 2.7
+    - 3.3
+    - 3.5
 
-branches:
-  only:
-    - travis_setup
-
-# Use new container infrastructure
-sudo: false
-
-# We use Anaconda to configure our Python environments
-language: generic
-
-# Build matrix is given as: "env x os - excludes"
-env:
-  global:
-    - PYTHONPATH=$TRAVIS_BUILD_DIR/software/python/magni/
-  matrix:
-    - MAGNI_CONDA=minimum CONDA_PYTHON_VERSION=2.7
-    - MAGNI_CONDA=minimum CONDA_PYTHON_VERSION=3.3
-    - MAGNI_CONDA=minimum CONDA_PYTHON_VERSION=3.4
-    - MAGNI_CONDA=minimum CONDA_PYTHON_VERSION=3.5
-    - MAGNI_CONDA=newest CONDA_PYTHON_VERSION=2.7
-    - MAGNI_CONDA=newest CONDA_PYTHON_VERSION=3.3
-    - MAGNI_CONDA=newest CONDA_PYTHON_VERSION=3.4
-    - MAGNI_CONDA=newest CONDA_PYTHON_VERSION=3.5
-
-# Exclude broken Anaconda OSX Python 3.4 minimum build
-matrix:
-  exclude:
-    - os: osx
-      env: MAGNI_CONDA=minimum CONDA_PYTHON_VERSION=3.4
-
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      if [[ "$CONDA_PYTHON_VERSION" == "2.7" ]]; then
-        wget http://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh -O miniconda.sh;
-      else
-        wget http://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
-      fi;
-    else
-      if [[ "$CONDA_PYTHON_VERSION" == "2.7" ]]; then
-        wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-      else
-        wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-      fi;
-    fi
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH=$HOME/miniconda/bin:$PATH
-  - conda update --yes conda
-
-# Install packages
-install:
-  - if [[ "$CONDA_PYTHON_VERSION" == "2.7" ]]; then
-      if [[ "$MAGNI_CONDA" == "minimum" ]]; then
-        conda create -n travis_test --yes python=2.7 numpy=1.8 "numexpr>=2.0.1" scipy=0.14 matplotlib=1.3 pytables=3.1 coverage=3.7 ipython=2.1 pyzmq nose=1.3 pep8=1.5 pillow=2.1.0 pyflakes=0.8 sphinx=1.3.1 setuptools=11.3 scikit-learn=0.15.1;
-      else
-        conda create -n travis_test --yes python=2.7 numpy numexpr "scipy>=0.16" matplotlib pytables coverage jupyter jsonschema pyzmq nose pep8 pillow pyflakes sphinx setuptools scikit-learn;
-      fi;
-    elif [[ "$CONDA_PYTHON_VERSION" == "3.3" ]]; then
-      if [[ "$MAGNI_CONDA" == "minimum" ]]; then
-        conda create -n travis_test --yes python=3.3 numpy=1.8 "numexpr>=2.0.1" scipy=0.14 matplotlib=1.3 pytables=3.1 coverage=3.7 ipython=2.1 pyzmq nose=1.3 pep8=1.5 pillow=2.1.0 pyflakes=0.8 sphinx=1.3.1 setuptools=11.3 scikit-learn=0.15.1;
-      else
-        conda create -n travis_test --yes python=3.3 numpy numexpr "scipy>=0.16" matplotlib pytables coverage ipython jsonschema pyzmq nose pep8 pillow pyflakes sphinx setuptools scikit-learn;
-      fi;
-    elif [[ "$CONDA_PYTHON_VERSION" == "3.4" ]]; then
-      if [[ "$MAGNI_CONDA" == "minimum" ]]; then
-        conda create -n travis_test --yes python=3.4 numpy=1.8 "numexpr>=2.0.1" scipy=0.14 matplotlib=1.3 pytables=3.1 coverage=3.7 ipython=2.1 pyzmq nose=1.3 pep8=1.5 pillow=2.3.1 pyflakes=0.8 sphinx=1.3.1 setuptools=11.3 scikit-learn=0.15.1;
-      else
-        conda create -n travis_test --yes python=3.4 numpy numexpr "scipy>=0.16" matplotlib pytables coverage jupyter jsonschema pyzmq nose pep8 pillow pyflakes sphinx setuptools scikit-learn;
-      fi;
-    elif [[ "$CONDA_PYTHON_VERSION" == "3.5" ]]; then
-      if [[ "$MAGNI_CONDA" == "minimum" ]]; then
-        conda create -n travis_test --yes python=3.5 numpy=1.10 "numexpr>=2.4.4" scipy=0.16 matplotlib=1.5 pytables=3.2 coverage=4.0 jupyter=1.0.0=py35_1 jupyter_client=4.1.1 jupyter_console=4.1.0 jupyter_core=4.0.6 jsonschema pyzmq nose=1.3 pep8=1.6 pillow=3.0 pyflakes=1.0.0 sphinx=1.3.1 setuptools=18.1 scikit-learn=0.17;
-      else
-        conda create -n travis_test --yes python=3.5 numpy numexpr "scipy>=0.16" matplotlib pytables coverage jupyter jsonschema pyzmq nose pep8 pillow pyflakes sphinx setuptools scikit-learn;
-      fi;
-    fi
-  - if [[ "$MAGNI_CONDA" == "minimum" ]]; then
-      conda install -n travis_test --yes -c https://conda.anaconda.org/chroxvi radon=1.2;
-    else
-      conda install -n travis_test --yes -c https://conda.anaconda.org/chroxvi radon;
-    fi;
-
-before_script:
-  - source activate travis_test
-  - cd software/python/magni/magni/tests
-
-script:
-  - python run_tests.py;
+install: 
+    - pip install setuptools
+    - pip install -e .
+script: python setup.py test
