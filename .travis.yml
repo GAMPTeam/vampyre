@@ -1,7 +1,6 @@
 os:
   - linux
   - osx
-  - windows
 
 language: python
 python:
@@ -11,6 +10,6 @@ python:
     - 3.5
 
 install: 
-    - pip install setuptools
     - pip install -e .
-script: python setup.py test
+script: 
+    - nosetests 
