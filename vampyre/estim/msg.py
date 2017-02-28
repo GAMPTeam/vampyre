@@ -107,9 +107,11 @@ class MsgHdlSimp(MsgHdl):
        applied.
     :param Boolean is_compelx:  If data is complex
     :param Boolean is_compelx:  If the estimation is MAP or MMSE
+    :param var_scale:  Scales variance to improve robustness
     """
     def __init__(self, alpha_min=1e-5, alpha_max=1-1e-5, damp=0.95, rep_axes=[],\
-                 shape = [], is_complex=False, map_est=True, damp_lim=1e6):
+                 shape = [], is_complex=False, map_est=True, damp_lim=1e6,\
+                 var_scale=1):
         MsgHdl.__init__(self)
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
@@ -119,6 +121,7 @@ class MsgHdlSimp(MsgHdl):
         self.is_complex = is_complex
         self.map_est = map_est
         self.shape = shape
+        self.var_scale = var_scale
             
 
     def msg_sub(self,z,zvar,r0,rvar0,r1_prev=None,rvar1_prev=None):
@@ -168,6 +171,9 @@ class MsgHdlSimp(MsgHdl):
                 r1 = self.damp*r1 + (1-self.damp)*r1_prev
                 rvar1 = self.damp*rvar1 + (1-self.damp)*rvar1_prev
                 
+        # Boost the variance
+        rvar1 = rvar1*self.var_scale
+                                
         return r1, rvar1
         
     def cost(self,z,zvar,r,rvar):
