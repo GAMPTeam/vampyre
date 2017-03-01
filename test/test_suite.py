@@ -5,17 +5,15 @@ from __future__ import print_function
 
 # Add the path to the vampyre module and then load the module
 import sys
-import os
 
 # Ensure some directories are in our PYTHONPATH, 
 # (Should be relative to project root w/ PyTest -- e.w.t. 3/1/17)
 # The directory search does not appear to work in python 2.
 for d in ('./test','./test/sparse'):    # 
     # Removed the verison check, don't need the full path -- e.w.t.
-    if not fd in sys.path:
-        sys.path.append(fd)
+    if not d in sys.path:
+        sys.path.append(d)
         
-
 import vampyre as vp
 import vamp_sparse_test
 
