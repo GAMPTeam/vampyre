@@ -9,7 +9,7 @@ import os
 
 # ensure some directories are in our PYTHONPATH, ( relative to test dir)
 # The directory search does not appear to work in python 2.
-for d in ('.','..','sparse'):
+for d in ('./test','./test/sparse'):    # Should be relative to project root.
     if sys.version[0] == '2':
         fd = d
     else:
