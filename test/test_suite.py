@@ -7,13 +7,11 @@ from __future__ import print_function
 import sys
 import os
 
-# ensure some directories are in our PYTHONPATH, ( relative to test dir)
+# Ensure some directories are in our PYTHONPATH, 
+# (Should be relative to project root w/ PyTest -- e.w.t. 3/1/17)
 # The directory search does not appear to work in python 2.
-for d in ('./test','./test/sparse'):    # Should be relative to project root.
-    if sys.version[0] == '2':
-        fd = d
-    else:
-        fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
+for d in ('./test','./test/sparse'):    # 
+    # Removed the verison check, don't need the full path -- e.w.t.
     if not fd in sys.path:
         sys.path.append(fd)
         
