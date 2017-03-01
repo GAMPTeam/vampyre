@@ -1,9 +1,10 @@
 """
 relu.py:  Estimator and test for the rectified linear unit
 """
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
-import scipy.special
-from scipy.integrate import quad
 
 # Import other subpackages in vampyre
 import vampyre.common as common

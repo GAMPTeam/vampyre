@@ -2,6 +2,7 @@
 """
 base.py:  Defines base class for estimators
 """
+from __future__ import division
 
 class Estim(object):
     """Base class for estimators

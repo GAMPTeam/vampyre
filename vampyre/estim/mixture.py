@@ -1,6 +1,9 @@
 """
 mixture.py:  Classes for estimators for mixture distributions
 """
+from __future__ import division
+from __future__ import print_function
+
 
 # Import general packages
 import numpy as np

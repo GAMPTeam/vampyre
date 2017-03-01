@@ -94,3 +94,10 @@ ENV/
 
 # temp swap files
 .*.swp
+
+# Sublime project stuff
+*.sublime-project
+*.sublime-workspace
+
+# OSX stuff
+.DS_Store

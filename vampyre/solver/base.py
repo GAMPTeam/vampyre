@@ -1,3 +1,9 @@
+"""
+solver.py:  Base class for a solver
+"""
+from __future__ import division
+
+
 class Solver(object):
     """
     Base class for solver

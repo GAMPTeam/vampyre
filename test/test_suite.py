@@ -1,16 +1,22 @@
-# -*- coding: utf-8 -*-
 """
+test_suite.py:  Runs through tests
 """
+from __future__ import print_function
 
 # Add the path to the vampyre module and then load the module
 import sys
 import os
 
 # ensure some directories are in our PYTHONPATH, ( relative to test dir)
+# The directory search does not appear to work in python 2.
 for d in ('.','..','sparse'):
-    fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
+    if sys.version[0] == '2':
+        fd = d
+    else:
+        fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
     if not fd in sys.path:
         sys.path.append(fd)
+        
 
 import vampyre as vp
 import vamp_sparse_test

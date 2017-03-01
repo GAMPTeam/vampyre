@@ -1,6 +1,8 @@
 """
 interval.py:  Estimators for outputs on intervals
 """
+from __future__ import division
+
 import numpy as np
 import scipy.special
 from scipy.integrate import quad

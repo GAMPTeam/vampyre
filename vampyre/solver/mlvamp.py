@@ -1,7 +1,8 @@
-from __future__ import division
 """
 mlvamp.py:  Multi-layer VAMP solver and test routines
 """
+from __future__ import division
+
 # Import general packages
 import numpy as np
 
@@ -155,7 +156,8 @@ class MLVamp(Solver):
             # Compute forward message
             msg_hdl = self.msg_hdl_list[i]
             self.rfwd[i], self.rvarfwd[i] = msg_hdl.msg_sub(\
-                self.zhat[i],self.zhatvar[i],self.rrev[i],self.rvarrev[i])
+                self.zhat[i],self.zhatvar[i],self.rrev[i],self.rvarrev[i],\
+                self.rfwd[i], self.rvarfwd[i])
                 
             # Compute forward message cost and Gaussian entropy 
             if self.comp_cost:
@@ -210,7 +212,8 @@ class MLVamp(Solver):
             # Compute reverse message
             msg_hdl = self.msg_hdl_list[i]
             self.rrev[i], self.rvarrev[i] = msg_hdl.msg_sub(\
-                self.zhat[i],self.zhatvar[i],self.rfwd[i],self.rvarfwd[i])
+                self.zhat[i],self.zhatvar[i],self.rfwd[i],self.rvarfwd[i],\
+                self.rrev[i], self.rvarrev[i])
                 
             # Compute reverse message cost and Gaussian entropy 
             if self.comp_cost:

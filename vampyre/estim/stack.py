@@ -1,10 +1,8 @@
 """
 stack.py:  Concantenated or "stacked" estimators
 """
-import numpy as np
-"""
-stack.py:  Stacked estimators
-"""
+from __future__ import division
+from __future__ import print_function
 
 # Import individual classes and methods from the current subpackage
 from vampyre.estim.base import Estim

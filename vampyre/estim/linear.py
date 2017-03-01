@@ -1,3 +1,7 @@
+"""
+linear.py:  Linear estimation class
+"""
+from __future__ import division
 
 import numpy as np
 
@@ -7,6 +11,7 @@ import vampyre.trans as trans
 
 # Import individual classes and methods from the current sub-package
 from vampyre.estim.base import Estim
+
 
 class LinEstim(Estim):
     """
@@ -263,9 +268,10 @@ def lin_test(zshape=(500,10),Ashape=(1000,500),verbose=False,tol=0.1):
     # Posterior estimate
     zhat, zhatvar, cost = est.est(r,rvar,return_cost=True)
     zerr = np.mean(np.abs(z-zhat)**2)
-    if verbose:
-        print("Posterior:    True: {0:f} Est:{1:f}".format(zerr,zhatvar))
-    if (np.abs(zerr-zhatvar) > tol*np.abs(zhatvar)):
+    fail = (np.abs(zerr-zhatvar) > tol*np.abs(zhatvar))
+    if verbose or fail:
+        print("\nPosterior:    True: {0:f} Est:{1:f}".format(zerr,zhatvar))
+    if fail:
        raise common.TestException("Posterior estimate Gaussian error "+ 
           " does not match predicted value")      
     
