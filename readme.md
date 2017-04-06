@@ -28,11 +28,6 @@ Testing is accomplished via `nose` and `nose-timer`. To run the full-suite of pa
 > python setup.py test
 ```
 
-To run tests with timing results, run the following command from the root vampyre directory.
-```bash
-> nosetests --with-timer
-```
-
 All test scripts can be found in the `./vampyre/vampyre/test` directory. All python scripts prefaced as `test_` will have their functions prefaced as `def test_*:` run.
 
 
