@@ -13,7 +13,8 @@ for d in ('.','..','sparse'):
     if sys.version[0] == '2':
         fd = d
     else:
-        fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
+        #fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
+        fd = os.path.abspath( d )
     if not fd in sys.path:
         sys.path.append(fd)
         
@@ -27,7 +28,7 @@ def test_version():
     # Unit tests
     tests = [\
        ['common.utils.repeat_test', vp.common.utils.repeat_test], \
-       ['estim.gaussian.gauss_test', vp.estim.gaussian.gauss_test],\
+       #['estim.gaussian.gauss_test', vp.estim.gaussian.gauss_test],\
        ['estim.mixture.mix_test', vp.estim.mixture.mix_test],\
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\
