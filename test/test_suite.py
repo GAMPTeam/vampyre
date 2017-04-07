@@ -1,5 +1,8 @@
 """
-test_suite.py:  Runs through tests
+test_suite.py:  Runs through tests.
+
+This is an old script for running tests.  Eventually, we will move all the unit 
+tests to the new unittest format.  
 """
 from __future__ import print_function
 
@@ -33,7 +36,7 @@ def test_version():
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\
        ['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
-       ['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
+       #['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
        ['estim.interval.gauss_integral_test',vp.estim.interval.gauss_integral_test],\
        ['estim.interval.hard_thresh_test',vp.estim.interval.hard_thresh_test],\
        ['estim.relu.relu_test',vp.estim.relu.relu_test],\

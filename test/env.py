@@ -12,6 +12,5 @@ def add_vp_path():
         else:
             #fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
             fd = os.path.abspath( d )
-        print(fd)
         if not fd in sys.path:
             sys.path.append(fd)
