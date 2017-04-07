@@ -39,11 +39,11 @@ class GaussEst(Estim):
         self.cost_avail = True  
         self.is_complex = is_complex  
         self.map_est = map_est         
-        self.shape = shape
+        self.shape = shape if (type(shape) is not int) else (shape,)
         self.var_axes = var_axes
         self.zmean_axes = zmean_axes
         
-        ndim = len(shape)
+        ndim = len(self.shape)
         if self.var_axes == 'all':
             self.var_axes = tuple(range(ndim))        
         if self.zmean_axes == 'all':
