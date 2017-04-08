@@ -166,7 +166,7 @@ class TestCases(unittest.TestCase):
         lin_two_test(nz0=200,nz1=100,ns=10,map_est=False,verbose=verbose)
     
     def test_lin_estim_two_cg(self):
-        verbose = True
+        verbose = False
         lin_two_test(nz0=100,nz1=200,ns=10,map_est=True,verbose=verbose,\
             est_meth='cg',nit_cg=100,tol1=1e-6,tol2=0.1,tolc=1e-6)
         
