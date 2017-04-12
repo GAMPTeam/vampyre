@@ -40,9 +40,9 @@ def test_version():
        ['estim.interval.gauss_integral_test',vp.estim.interval.gauss_integral_test],\
        ['estim.interval.hard_thresh_test',vp.estim.interval.hard_thresh_test],\
        ['estim.relu.relu_test',vp.estim.relu.relu_test],\
-       ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
-       ['solver.mlvamp.mlvamp_probit_test',vp.solver.mlvamp.mlvamp_probit_test],\
-       ['vamp_sparse_test.sparse_inv',vamp_sparse_test.sparse_inv]\
+       #['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
+       #['solver.mlvamp.mlvamp_probit_test',vp.solver.mlvamp.mlvamp_probit_test],\
+       #['vamp_sparse_test.sparse_inv',vamp_sparse_test.sparse_inv]\
     ]
     
     cnt = 0

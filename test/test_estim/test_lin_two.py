@@ -12,7 +12,8 @@ env.add_vp_path()
 import vampyre as vp
         
 def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,\
-    tol1=1e-3,tol2=1e-3,tolc=1e-3,est_meth='svd',nit_cg=100):
+    tol1=1e-3,tol2=1e-3,tolc=1e-3,est_meth='svd',nit_cg=100,\
+    wvar=None):
     """
     Unit test for the linear estimator class
     
@@ -39,6 +40,7 @@ def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,\
     :param est_meth:  estimation method.  Either `svd` or `cg` corresponding 
        to whether the method is SVD or conjugate-gradient
     :param nit_cg:  number of CG iterations
+    :param wvar:  Noise variance.  Set to `None` to randomly select
     """            
 
     # Other parameters
@@ -47,8 +49,10 @@ def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,\
     # Generate random variances
     rvar0 = 10**(np.random.uniform(-1,1,1))[0]
     rvar1 = 10**(np.random.uniform(-1,1,1))[0]
-    wvar = 10**(np.random.uniform(-1,1,1))[0]
-    
+    if wvar is None:
+        wvar = 10**(np.random.uniform(-1,1,1))[0]
+    wvar_zero = (wvar <= 0)
+        
     # Get shapes
     if (ns == 1):
         zshape0 = (nz0,)       
@@ -67,7 +71,10 @@ def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,\
     # Add noise on input and output
     r0 = np.random.normal(0,1,zshape0) 
     z0 = r0 + np.random.normal(0,np.sqrt(rvar0),zshape0)
-    z1 = A.dot(z0) + b + np.random.normal(0,np.sqrt(wvar),zshape1)
+    if wvar_zero:
+        z1 = A.dot(z0) + b
+    else:
+        z1 = A.dot(z0) + b + np.random.normal(0,np.sqrt(wvar),zshape1)        
     r1 = z1 + np.random.normal(0,np.sqrt(rvar1),zshape1)
         
     # Create linear estimator class
@@ -79,51 +86,72 @@ def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,\
     r = [r0,r1]
     rvar = [rvar0,rvar1]
     
-    # Find the true solution
-    # H = ||z1-A*z0-b||^2/wvar + \sum_{i=0,1} ||z-ri||^2/rvari
-    H = np.zeros((nz0+nz1,nz0+nz1))
-    H[:nz0,:nz0] = A.conj().T.dot(A)/wvar + np.eye(nz0)/rvar0
-    H[:nz0,nz0:] = -A.conj().T/wvar 
-    H[nz0:,:nz0] = -A/wvar 
-    H[nz0:,nz0:] = np.eye(nz1)*(1/wvar + 1/rvar1) 
-    if ns > 1:
-        g = np.zeros((nz0+nz1,ns))
-        g[:nz0,:] = -A.conj().T.dot(b)/wvar + r0/rvar0
-        g[nz0:,:] = b/wvar + r1/rvar1 
-    else:
-        g = np.zeros(nz0+nz1)
-        g[:nz0] = -A.conj().T.dot(b)/wvar + r0/rvar0
-        g[nz0:] = b/wvar + r1/rvar1 
+    if wvar_zero:
+        # Find the true solution for the case wvar = 0
+        # J = ||A*z0+b-r1||^2/rvar1 + ||z0-r0||^2/rvar0
+        H = A.conj().T.dot(A)/rvar1 + np.eye(nz0)/rvar0
+        g = A.conj().T.dot(r1-b)/rvar1 + r0/rvar0
+        
+        zhat0_true = np.linalg.solve(H,g)
+        zhat1_true = A.dot(zhat0_true)
+        
+        Q = np.linalg.inv(H)
+        zhatvar0_true = np.mean(np.diag(Q))
+        zhatvar1_true = np.mean(np.diag(A.dot(Q.dot(A.conj().T))))
+        
+        cost0 = np.linalg.norm(zhat0_true-r0)**2/rvar0
+        cost1 = np.linalg.norm(zhat1_true-r1)**2/rvar1
+        cost_true = cost0+cost1
+        if not is_complex:
+            cost_true = 0.5*cost_true
             
-    zhat_true = np.linalg.solve(H,g)
-    if ns > 1:
-        zhat0_true = zhat_true[:nz0,:]
-        zhat1_true = zhat_true[nz0:,:]
     else:
-        zhat0_true = zhat_true[:nz0]
-        zhat1_true = zhat_true[nz0:]        
     
-    zcov = np.diag(np.linalg.inv(H))
-    zhatvar0_true = np.mean(zcov[:nz0])
-    zhatvar1_true = np.mean(zcov[nz0:])
-    
-    # Compute the cost of the first order terms
-    cost_out = np.linalg.norm(zhat1_true-A.dot(zhat0_true)-b)**2/wvar
-    cost0 = np.linalg.norm(zhat0_true-r0)**2/rvar0
-    cost1 = np.linalg.norm(zhat1_true-r1)**2/rvar1
-    cost_true = cost_out+cost0+cost1
-    
-    # Compute the cost of the second order terms
-    if is_complex:
-        cscale = 1
-    else:
-        cscale = 2
-    cost_true += nz1*ns*np.log(cscale*np.pi*wvar)
-    if not map_est:
-        lam = np.linalg.eigvalsh(H)
-        cost_true -= ns*np.sum(np.log(cscale*np.pi/lam))
-    
-    cost_true /= cscale
+        # Find the true solution
+        # H = ||z1-A*z0-b||^2/wvar + \sum_{i=0,1} ||z-ri||^2/rvari
+        H = np.zeros((nz0+nz1,nz0+nz1))
+        H[:nz0,:nz0] = A.conj().T.dot(A)/wvar + np.eye(nz0)/rvar0
+        H[:nz0,nz0:] = -A.conj().T/wvar 
+        H[nz0:,:nz0] = -A/wvar 
+        H[nz0:,nz0:] = np.eye(nz1)*(1/wvar + 1/rvar1) 
+        if ns > 1:
+            g = np.zeros((nz0+nz1,ns))
+            g[:nz0,:] = -A.conj().T.dot(b)/wvar + r0/rvar0
+            g[nz0:,:] = b/wvar + r1/rvar1 
+        else:
+            g = np.zeros(nz0+nz1)
+            g[:nz0] = -A.conj().T.dot(b)/wvar + r0/rvar0
+            g[nz0:] = b/wvar + r1/rvar1 
+            
+        zhat_true = np.linalg.solve(H,g)
+        if ns > 1:
+            zhat0_true = zhat_true[:nz0,:]
+            zhat1_true = zhat_true[nz0:,:]
+        else:
+            zhat0_true = zhat_true[:nz0]
+            zhat1_true = zhat_true[nz0:]        
+        
+        zcov = np.diag(np.linalg.inv(H))
+        zhatvar0_true = np.mean(zcov[:nz0])
+        zhatvar1_true = np.mean(zcov[nz0:])
+        
+        # Compute the cost of the first order terms
+        cost_out = np.linalg.norm(zhat1_true-A.dot(zhat0_true)-b)**2/wvar
+        cost0 = np.linalg.norm(zhat0_true-r0)**2/rvar0
+        cost1 = np.linalg.norm(zhat1_true-r1)**2/rvar1
+        cost_true = cost_out+cost0+cost1
+        
+        # Compute the cost of the second order terms
+        if is_complex:
+            cscale = 1
+        else:
+            cscale = 2
+        cost_true += nz1*ns*np.log(cscale*np.pi*wvar)
+        if not map_est:
+            lam = np.linalg.eigvalsh(H)
+            cost_true -= ns*np.sum(np.log(cscale*np.pi/lam))
+        
+        cost_true /= cscale
         
     zhat, zhatvar, cost = est.est(r,rvar,return_cost=True)
     zhat0, zhat1 = zhat
@@ -169,7 +197,9 @@ class TestCases(unittest.TestCase):
         verbose = False
         lin_two_test(nz0=100,nz1=200,ns=10,map_est=True,verbose=verbose,\
             est_meth='cg',nit_cg=100,tol1=1e-6,tol2=0.1,tolc=1e-6)
-        
+        lin_two_test(nz0=100,nz1=200,ns=10,map_est=True,verbose=verbose,\
+            est_meth='cg',nit_cg=100,tol1=1e-6,tol2=0.1,tolc=1e-6,wvar=0)
+            
         
 if __name__ == '__main__':    
     unittest.main()
