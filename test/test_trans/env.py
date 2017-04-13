@@ -6,7 +6,7 @@ import sys
 
 # ensure some directories are in our PYTHONPATH, ( relative to test dir)
 def add_vp_path():
-    for d in ('.','..'):
+    for d in ('..','..\..'):
         if sys.version[0] == '2':
             fd = d
         else:

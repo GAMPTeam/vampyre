@@ -116,7 +116,7 @@ def probit_test(nz0=512,nz1=4096,ncol=10, snr=30, verbose=False, plot=False,\
     
     # Create the message handler
     damp=0.95
-    rvarmin = 0.01
+    rvarmin = 0.00
     msg_hdl0 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape0,damp=damp,rvar1_min=rvarmin) 
     msg_hdl1 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape1,damp=damp,rvar1_min=rvarmin) 
     msg_hdl_list  = [msg_hdl0,msg_hdl1]
