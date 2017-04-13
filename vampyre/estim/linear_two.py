@@ -42,6 +42,8 @@ class LinEstimTwo(Estim):
         an SVD-based method or conjugate gradient.
     :param nit_cg:  Maximum number of CG iterations.  Note the CG optimization
         is warm-started with the previous value.
+    :param btol_cg:  Stopping tolerance on the CG
+    :param save_stats:  Save statistics for debugging
        
     :note:  The linear operator :code:`A` must have :code:`svd_avail==True`
         to use `est_meth = svd`.  Otherwise, use `est_meth=cg`.        
@@ -53,7 +55,8 @@ class LinEstimTwo(Estim):
     """    
     def __init__(self,A,b,wvar=0,\
                  z1rep_axes=(0,), z0rep_axes=(0,),wrep_axes='all',\
-                 map_est=False,is_complex=False,est_meth='svd',nit_cg=100):
+                 map_est=False,is_complex=False,est_meth='svd',\
+                 nit_cg=100, btol_cg=1e-3, save_stats=False):
         
         Estim.__init__(self)
         self.A = A
@@ -96,6 +99,25 @@ class LinEstimTwo(Estim):
         
         # CG parameters
         self.nit_cg = nit_cg
+        self.btol_cg = btol_cg
+        self.save_stats = save_stats
+        self.init_hist_dict()
+        
+    def init_hist_dict(self):
+        """
+        Adds history dictionary for LSQR stats
+        """
+        
+        # Attributes to record
+        if self.save_stats:
+            self.hist_list = ['zhat_nit','zhat_gnorm','zvar0_nit','zvar1_nit']
+        else:
+            self.hist_list = []
+        
+        # Initialize the dictionary with an empty list for each item
+        self.hist_dict = {}
+        for attr in self.hist_list:
+            self.hist_dict[attr] = []
                 
     def init_cg(self):
         """
@@ -146,8 +168,7 @@ class LinEstimTwo(Estim):
                     "Noise variance must be constant over output axis")                    
             if not (i in self.z0rep_axes) and not (i in srep_axes):                
                 raise common.VpException(
-                    "Variance must be constant over input axis")
-        
+                    "Variance must be constant over input axis")        
                             
         
     def est_init(self, return_cost=False):
@@ -247,9 +268,7 @@ class LinEstimTwo(Estim):
                 
         elif np.any(rvar0 == np.Inf):
             raise common.VpException("Infinite variance case for rvar0 "+\
-               "is not yet implemented")
-        
-
+               "is not yet implemented")        
                         
         # Get dimensions
         self.n0 = np.prod(self.shape0)
@@ -271,12 +290,16 @@ class LinEstimTwo(Estim):
         else:
             zinit = self.zlast
         g -= F.dot(zinit)
-            
+                
         # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g,iter_lim=self.nit_cg)
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g,iter_lim=self.nit_cg,btol=self.btol_cg)
         zvec = lsqr_out[0] + zinit
         self.zlast = zvec
         zhat = F.unpack(zvec)
+        
+        # Save stats 
+        if 'zhat_nit' in self.hist_list:
+            self.hist_dict['zhat_nit'].append(lsqr_out[2])      
         
         """
         Cost
@@ -315,11 +338,14 @@ class LinEstimTwo(Estim):
         g0 -= F.dot(zinit)            
             
         # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g0,iter_lim=self.nit_cg)
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g0,iter_lim=self.nit_cg,btol=self.btol_cg)
         zvec0 = lsqr_out[0] + zinit
         self.zvec0_last = zvec0        
         dzvec = zvec0 - zvec        
         dz0, dz1 = F.unpack(dzvec)
+        if 'zvar0_nit' in self.hist_list:
+            self.hist_dict['zvar0_nit'].append(lsqr_out[2])
+
         
         # Compute the correlations
         alpha0 = np.mean(np.real(self.dr0.conj()*dz0),self.z0rep_axes) /\
@@ -338,11 +364,15 @@ class LinEstimTwo(Estim):
         g1 -= F.dot(zinit)
             
         # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g1,iter_lim=self.nit_cg)
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g1,iter_lim=self.nit_cg,btol=self.btol_cg)
         zvec1 = lsqr_out[0] + zinit
         self.zvec1_last = zvec1
         dzvec = zvec1 - zvec        
         dz0, dz1 = F.unpack(dzvec)
+        if 'zvar1_nit' in self.hist_list:
+            self.hist_dict['zvar1_nit'].append(lsqr_out[2])
+        
+        
         
         # Compute the correlations
         alpha1 = np.mean(np.real(self.dr1.conj()*dz1),self.z1rep_axes) /\

@@ -12,7 +12,7 @@ import os
 
 # ensure some directories are in our PYTHONPATH, ( relative to test dir)
 # The directory search does not appear to work in python 2.
-for d in ('.','..','sparse'):
+for d in ('.','..'):
     if sys.version[0] == '2':
         fd = d
     else:
@@ -23,7 +23,6 @@ for d in ('.','..','sparse'):
         
 
 import vampyre as vp
-import vamp_sparse_test
 
 def test_version():
     vp.version_info()
@@ -35,7 +34,7 @@ def test_version():
        ['estim.mixture.mix_test', vp.estim.mixture.mix_test],\
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\
-       ['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
+       #['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
        #['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
        ['estim.interval.gauss_integral_test',vp.estim.interval.gauss_integral_test],\
        ['estim.interval.hard_thresh_test',vp.estim.interval.hard_thresh_test],\

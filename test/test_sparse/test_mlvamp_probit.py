@@ -177,7 +177,7 @@ class TestCases(unittest.TestCase):
         probit_test(ncol=10,est_meth='svd')
         
         
-if __name__ == '__main__':        
+if __name__ == '__main__':    
     unittest.main()
 
 
