@@ -2,7 +2,6 @@
 import vampyre.common
 import vampyre.estim
 import vampyre.trans
-import vampyre.test
 import vampyre.solver
 
 def version():
