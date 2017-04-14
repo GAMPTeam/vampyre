@@ -42,7 +42,7 @@ class LinEstimTwo(Estim):
         an SVD-based method or conjugate gradient.
     :param nit_cg:  Maximum number of CG iterations.  Note the CG optimization
         is warm-started with the previous value.
-    :param btol_cg:  Stopping tolerance on the CG
+    :param atol_cg:  Stopping tolerance on the CG
     :param save_stats:  Save statistics for debugging
        
     :note:  The linear operator :code:`A` must have :code:`svd_avail==True`
@@ -56,7 +56,7 @@ class LinEstimTwo(Estim):
     def __init__(self,A,b,wvar=0,\
                  z1rep_axes=(0,), z0rep_axes=(0,),wrep_axes='all',\
                  map_est=False,is_complex=False,est_meth='svd',\
-                 nit_cg=100, btol_cg=1e-3, save_stats=False):
+                 nit_cg=100, atol_cg=1e-3, save_stats=False):
         
         Estim.__init__(self)
         self.A = A
@@ -99,7 +99,7 @@ class LinEstimTwo(Estim):
         
         # CG parameters
         self.nit_cg = nit_cg
-        self.btol_cg = btol_cg
+        self.atol_cg = atol_cg
         self.save_stats = save_stats
         self.init_hist_dict()
         
@@ -110,7 +110,7 @@ class LinEstimTwo(Estim):
         
         # Attributes to record
         if self.save_stats:
-            self.hist_list = ['zhat_nit','zhat_gnorm','zvar0_nit','zvar1_nit']
+            self.hist_list = ['zhat_nit','zvar0_nit','zvar1_nit']
         else:
             self.hist_list = []
         
@@ -292,7 +292,7 @@ class LinEstimTwo(Estim):
         g -= F.dot(zinit)
                 
         # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g,iter_lim=self.nit_cg,btol=self.btol_cg)
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g,iter_lim=self.nit_cg,atol=self.atol_cg)
         zvec = lsqr_out[0] + zinit
         self.zlast = zvec
         zhat = F.unpack(zvec)
@@ -338,7 +338,7 @@ class LinEstimTwo(Estim):
         g0 -= F.dot(zinit)            
             
         # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g0,iter_lim=self.nit_cg,btol=self.btol_cg)
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g0,iter_lim=self.nit_cg,atol=self.atol_cg)
         zvec0 = lsqr_out[0] + zinit
         self.zvec0_last = zvec0        
         dzvec = zvec0 - zvec        
@@ -364,7 +364,7 @@ class LinEstimTwo(Estim):
         g1 -= F.dot(zinit)
             
         # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g1,iter_lim=self.nit_cg,btol=self.btol_cg)
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g1,iter_lim=self.nit_cg,atol=self.atol_cg)
         zvec1 = lsqr_out[0] + zinit
         self.zvec1_last = zvec1
         dzvec = zvec1 - zvec        

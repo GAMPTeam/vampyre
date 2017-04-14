@@ -80,7 +80,7 @@ def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,\
     # Create linear estimator class
     Aop = vp.trans.MatrixLT(A,zshape0)
     est = vp.estim.LinEstimTwo(Aop,b,wvar=wvar,map_est=map_est,z1rep_axes='all',\
-                      z0rep_axes='all',est_meth=est_meth,nit_cg=nit_cg)
+                      z0rep_axes='all',est_meth=est_meth,nit_cg=nit_cg,atol_cg=1e-9)
     
     # Pack the variables
     r = [r0,r1]
