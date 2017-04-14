@@ -4,6 +4,7 @@ linear_two.py:  Estimation for general linear constraints with Gaussian noise.
 from __future__ import division
 
 import numpy as np
+import scipy.sparse.linalg
 
 # Import other subpackages in vampyre
 import vampyre.common as common
@@ -12,6 +13,7 @@ import vampyre.trans as trans
 # Import individual classes and methods from the current sub-package
 from vampyre.estim.base import Estim
 
+                   
 class LinEstimTwo(Estim):
     """
     Esitmator based on a linear constraint with noise
@@ -35,20 +37,26 @@ class LinEstimTwo(Estim):
         Default is 'all'.
     :param Boolean is_complex:  indiates if :math:`z` is complex    
     :param Boolean map_est:  indicates if estimator is to perform MAP 
-        or MMSE estimation. This is used for the cost computation.      
+        or MMSE estimation. This is used for the cost computation.  
+    :param est_meth: Estimation method.  `svd` or `cg` corresponding to
+        an SVD-based method or conjugate gradient.
+    :param nit_cg:  Maximum number of CG iterations.  Note the CG optimization
+        is warm-started with the previous value.
+    :param atol_cg:  Stopping tolerance on the CG
+    :param save_stats:  Save statistics for debugging
        
-    :note:  The linear operator :code:`A` must have :code:`svd_avail==True`.
-       In the future, if an SVD is not available, we will use conjugate
-       gradient
+    :note:  The linear operator :code:`A` must have :code:`svd_avail==True`
+        to use `est_meth = svd`.  Otherwise, use `est_meth=cg`.        
     :note:  The linear operator must also have the :code:`shape0` and
        :code:`shape1` arrays available to compute the dimensions.
        
     :note:  The axes :code:`wrep_axes` and :code:`zerp_axes` must 
-       include the axis in which :code:`A` operates.
+       include the axis in which :code:`A` operates for the SVD method.
     """    
     def __init__(self,A,b,wvar=0,\
                  z1rep_axes=(0,), z0rep_axes=(0,),wrep_axes='all',\
-                 map_est=False,is_complex=False):
+                 map_est=False,is_complex=False,est_meth='svd',\
+                 nit_cg=100, atol_cg=1e-3, save_stats=False):
         
         Estim.__init__(self)
         self.A = A
@@ -78,34 +86,89 @@ class LinEstimTwo(Estim):
         self.z0rep_axes = z0rep_axes
         self.z1rep_axes = z1rep_axes        
         self.wrep_axes = wrep_axes        
-
+        
+        # Initialization depending on the estimation method
+        self.est_meth = est_meth
+        if self.est_meth == 'svd':
+            self.init_svd()
+        elif self.est_meth == 'cg':
+            self.init_cg()
+        else:
+            raise common.VpException(
+                "Unknown estimation method {0:s}".format(est_meth))
+        
+        # CG parameters
+        self.nit_cg = nit_cg
+        self.atol_cg = atol_cg
+        self.save_stats = save_stats
+        self.init_hist_dict()
+        
+    def init_hist_dict(self):
+        """
+        Adds history dictionary for LSQR stats
+        """
+        
+        # Attributes to record
+        if self.save_stats:
+            self.hist_list = ['zhat_nit','zvar0_nit','zvar1_nit']
+        else:
+            self.hist_list = []
+        
+        # Initialize the dictionary with an empty list for each item
+        self.hist_dict = {}
+        for attr in self.hist_list:
+            self.hist_dict[attr] = []
+                
+    def init_cg(self):
+        """
+        Initialization that is specific to the conjugate gradient method
+        """
+        
+        # Draw random perturbations for computing the numerical gradients
+        grad_step = 1;
+        self.dr0 = np.random.normal(0,grad_step,self.shape0)
+        self.dr1 = np.random.normal(0,grad_step,self.shape1)
+        self.dr0_norm_sq = np.mean(np.abs(self.dr0)**2, self.z0rep_axes)
+        self.dr1_norm_sq = np.mean(np.abs(self.dr1)**2, self.z1rep_axes)
+        
+        # Initialize the variables
+        self.zlast = None
+        self.zvec0_last = None
+        self.zvec1_last = None
+        
+                    
+    def init_svd(self):
+        """
+        Initialization for the SVD method 
+        """
         # Compute the SVD terms
         # Take an SVD A=USV'.  Then write p = SV'z + w,
-        if not A.svd_avail:
+        if not self.A.svd_avail:
             raise common.VpException("Transform must support an SVD")
-        self.bt = A.UsvdH(b)
-        srep_axes = A.srep_axes
+        self.bt = self.A.UsvdH(self.b)
+        srep_axes = self.A.srep_axes
         
         # Compute the norm of ||b-UU*(b)||^2/wvar
         if np.all(self.wvar > 0):
-            bp = A.Usvd(self.bt)
-            wvar_rep = common.repeat_axes(wvar, self.shape1, self.wrep_axes, rep=False)
-            err = np.abs(b-bp)**2
+            bp = self.A.Usvd(self.bt)
+            wvar_rep = common.repeat_axes(self.wvar, self.shape1, self.wrep_axes, rep=False)
+            err = np.abs(self.b-bp)**2
             self.bpnorm = np.sum(err/wvar_rep)
         else:
             self.bpnorm = 0
                         
-        # Check that all axes on which A operates are repeated        
+        # Check that all axes on which A operates are repeated 
+        ndim = len(self.shape1)
         for i in range(ndim):
-            if not (i in z1rep_axes) and not (i in srep_axes):                
+            if not (i in self.z1rep_axes) and not (i in srep_axes):                
                 raise common.VpException(
                     "Variance must be constant over output axis")
-            if not (i in wrep_axes) and not (i in srep_axes):                
+            if not (i in self.wrep_axes) and not (i in srep_axes):                
                 raise common.VpException(
                     "Noise variance must be constant over output axis")                    
-            if not (i in z0rep_axes) and not (i in srep_axes):                
+            if not (i in self.z0rep_axes) and not (i in srep_axes):                
                 raise common.VpException(
-                    "Variance must be constant over input axis")
+                    "Variance must be constant over input axis")        
                             
         
     def est_init(self, return_cost=False):
@@ -141,10 +204,193 @@ class LinEstimTwo(Estim):
         else:
             return zmean, zvar
                     
-        
     def est(self,r,rvar,return_cost=False):
         """
         Estimation function
+        
+        The proximal estimation function as 
+        described in the base class :class:`vampyre.estim.base.Estim`
+                
+        :param r: Proximal mean
+        :param rvar: Proximal variance
+        :param Boolean return_cost:  Flag indicating if :code:`cost` is 
+            to be returned
+        
+        :returns: :code:`zhat, zhatvar, [cost]` which are the posterior
+            mean, variance and optional cost.
+        """      
+        if self.est_meth == 'svd':
+            return self.est_svd(r,rvar,return_cost)
+        elif self.est_meth == 'cg':
+            return self.est_cg(r,rvar,return_cost)
+        else:
+            raise common.VpException(
+                "Unknown estimation method {0:s}".format(self.est_meth))
+                
+    def est_cg(self,r,rvar,return_cost=False):        
+        """
+        CG-based estimation function
+        
+        The proximal estimation function as 
+        described in the base class :class:`vampyre.estim.base.Estim`
+                
+        :param r: Proximal mean
+        :param rvar: Proximal variance
+        :param Boolean return_cost:  Flag indicating if :code:`cost` is 
+            to be returned
+        
+        :returns: :code:`zhat, zhatvar, [cost]` which are the posterior
+            mean, variance and optional cost.
+        """              
+
+        # Unpack the inputs        
+        r0, r1 = r
+        rvar0, rvar1 = rvar
+
+        # Infinite variance case
+        if np.any(rvar1 == np.Inf):
+            zhat0 = r0
+            zhatvar0 = rvar0
+            zhat1 = self.A.dot(r0) + self.b
+            
+            # Compute variance numerically.  
+            yvar = np.abs(self.A.dot(self.dr0))**2
+            zhatvar1 = np.mean(yvar, self.z1rep_axes)*rvar0/\
+                np.mean(self.dr0_norm_sq)
+            
+            zhat = [zhat0,zhat1]
+            zhatvar = [zhatvar0, zhatvar1]
+            cost = 0
+            if return_cost:
+                return zhat, zhatvar, cost
+            else:
+                return zhat, zhatvar
+                
+        elif np.any(rvar0 == np.Inf):
+            raise common.VpException("Infinite variance case for rvar0 "+\
+               "is not yet implemented")        
+                        
+        # Get dimensions
+        self.n0 = np.prod(self.shape0)
+        self.n1 = np.prod(self.shape1)
+        
+        """
+        First-order terms
+        """
+        # Create the LSQR transform for the problem
+        # The VAMP problem is equivalent to minimizing ||F(z)-g||^2
+        F = LSQROp(self.A,self.b,rvar, self.wvar,\
+            self.z0rep_axes, self.z1rep_axes,self.wrep_axes,\
+            self.shape0, self.shape1, self.is_complex)
+        g = F.get_tgt_vec(r)
+                    
+        # Get the initial condition
+        if self.zlast is None:
+            zinit = F.pack(r0,r1)
+        else:
+            zinit = self.zlast
+        g -= F.dot(zinit)
+                
+        # Run the LSQR optimization
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g,iter_lim=self.nit_cg,atol=self.atol_cg)
+        zvec = lsqr_out[0] + zinit
+        self.zlast = zvec
+        zhat = F.unpack(zvec)
+        
+        # Save stats 
+        if 'zhat_nit' in self.hist_list:
+            self.hist_dict['zhat_nit'].append(lsqr_out[2])      
+        
+        """
+        Cost
+        """
+        if return_cost:
+            # Compute the cost                
+            cost = lsqr_out[3]**2
+    
+            # Add the cost for the second order terms.
+            # 
+            # We only consider the MAP case, where the second-order cost is
+            # (1/2)*nz1*log(2*pi*wvar)
+            if self.is_complex:
+                cscale = 1
+            else:
+                cscale = 2
+            cost /= cscale
+            if F.wvar_pos:
+                if np.all(self.wvar > 0):
+                    cost += (1/cscale)*self.n1*np.mean(np.log(cscale*np.pi*self.wvar))                
+
+        """
+        Second-order terms
+        
+        These are computed via the numerical gradient along a random direction
+        """        
+        # Perturb r0
+        r0p = r0 + self.dr0        
+        g0 = F.get_tgt_vec([r0p,r1])
+                    
+        # Get the initial condition
+        if self.zvec0_last is None:
+            zinit = F.pack(r0p,r1)
+        else:
+            zinit = self.zvec0_last
+        g0 -= F.dot(zinit)            
+            
+        # Run the LSQR optimization
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g0,iter_lim=self.nit_cg,atol=self.atol_cg)
+        zvec0 = lsqr_out[0] + zinit
+        self.zvec0_last = zvec0        
+        dzvec = zvec0 - zvec        
+        dz0, dz1 = F.unpack(dzvec)
+        if 'zvar0_nit' in self.hist_list:
+            self.hist_dict['zvar0_nit'].append(lsqr_out[2])
+
+        
+        # Compute the correlations
+        alpha0 = np.mean(np.real(self.dr0.conj()*dz0),self.z0rep_axes) /\
+            self.dr0_norm_sq
+        zhatvar0 = alpha0*rvar0
+        
+        # Perturb r1
+        r1p = r1 + self.dr1
+        g1 = F.get_tgt_vec([r0,r1p])
+                    
+        # Get the initial condition
+        if self.zvec1_last is None:
+            zinit = F.pack(r0,r1p)
+        else:
+            zinit = self.zvec1_last
+        g1 -= F.dot(zinit)
+            
+        # Run the LSQR optimization
+        lsqr_out = scipy.sparse.linalg.lsqr(F,g1,iter_lim=self.nit_cg,atol=self.atol_cg)
+        zvec1 = lsqr_out[0] + zinit
+        self.zvec1_last = zvec1
+        dzvec = zvec1 - zvec        
+        dz0, dz1 = F.unpack(dzvec)
+        if 'zvar1_nit' in self.hist_list:
+            self.hist_dict['zvar1_nit'].append(lsqr_out[2])
+        
+        
+        
+        # Compute the correlations
+        alpha1 = np.mean(np.real(self.dr1.conj()*dz1),self.z1rep_axes) /\
+            self.dr1_norm_sq
+        zhatvar1 = alpha1*rvar1
+        
+        # Pack the variances            
+        zhatvar = [zhatvar0, zhatvar1]
+                                                         
+        if return_cost:
+            return zhat,zhatvar, cost
+        else:
+            return zhat,zhatvar                    
+        
+
+    def est_svd(self,r,rvar,return_cost=False):
+        """
+        SVD-based estimation function
         
         The proximal estimation function as 
         described in the base class :class:`vampyre.estim.base.Estim`
@@ -291,6 +537,8 @@ class LinEstimTwo(Estim):
         if np.all(self.wvar > 0):
             e = qhat1-s_rep*qhat0-self.bt
             costq = np.sum((np.abs(e)**2)/wvar_rep)
+        else:
+            costq = 0
         cost0 = np.sum((np.abs(qhat0-qbar0)**2)/rvar0_rep)
         cost1 = np.sum((np.abs(qhat1-qbar1)**2)/rvar1_rep)
         cost = cost1_perp + costq + cost0 + cost1
@@ -325,146 +573,130 @@ class LinEstimTwo(Estim):
         
         return zhat, zhatvar, cost
         
-def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,tol=1e-8):
+class LSQROp(scipy.sparse.linalg.LinearOperator):
     """
-    Unit test for the linear estimator class
+    LSQR operator for the VAMP least squares problem.
     
-    The test is performed by generating random data:
+    Defines an operator F(z0,z1) and constant vector g such that the VAMP 
+    optimization is equivalent to 
     
-    :math:`z_1=Az_0+w,  z_0 \\sim {\\mathcal N}(r_0, \\tau_0 I), 
-       w \\sim {\\mathcal N}(0, \\tau_w I)`
-       
-    :math:`r_1 = z_1 + {\\mathcal N}(0,\\tau_1 I)
-       
-    Then the method estimates :math:`z_0,z_1` from :math:`r_1,r_0` 
-    and compares the expected and measured errors.
+    min_z ||F(z) - g||^2
     
-    :param nz0:  number of rows of :math:`z_0`
-    :param nz1:  number of rows of :math:`z_1`
-    :param ns:  number of columns of :math:`z_0` and :math:`z_1`
-    :param Boolean map_est:  perform MAP estimation 
-    :param Boolean verbose:  print results
-    :param tol:  error tolerance above which test is considered to fail.    
-    """            
-
-    # Other parameters
-    is_complex = False
+    This can be solved with LSQR.
     
-    # Generate random variances
-    rvar0 = 10**(np.random.uniform(-1,1,1))[0]
-    rvar1 = 10**(np.random.uniform(-1,1,1))[0]
-    wvar = 10**(np.random.uniform(-1,1,1))[0]
-    
-    # Get shapes
-    if (ns == 1):
-        zshape0 = (nz0,)       
-        zshape1 = (nz1,)
-    else:
-        zshape0 = (nz0,ns)       
-        zshape1 = (nz1,ns)
-    Ashape = (nz1,nz0)
-    
-    # Generate random matrix and offset
-    A = np.random.normal(0,1,Ashape)/np.sqrt(nz0)
-    b = np.zeros(nz1) 
-    if ns > 1:
-        b = b[:,None]
-    
-    # Add noise on input and output
-    r0 = np.random.normal(0,1,zshape0) 
-    z0 = r0 + np.random.normal(0,np.sqrt(rvar0),zshape0)
-    z1 = A.dot(z0) + b + np.random.normal(0,np.sqrt(wvar),zshape1)
-    r1 = z1 + np.random.normal(0,np.sqrt(rvar1),zshape1)
+    When wvar == 0:
+        F(z0) = [D*z0; A.dot(z0)]  g = D*[r0; r1-b]  
+        D= diag(1/sqrt([rvar0; rvar1]))
         
-    # Create linear estimator class
-    Aop = trans.MatrixLT(A,zshape0)
-    est = LinEstimTwo(Aop,b,wvar=wvar,map_est=map_est,z1rep_axes='all',\
-                      z0rep_axes='all')
-    
-    # Pack the variables
-    r = [r0,r1]
-    rvar = [rvar0,rvar1]
-    
-    # Find the true solution
-    # H = ||z1-A*z0-b||^2/wvar + \sum_{i=0,1} ||z-ri||^2/rvari
-    H = np.zeros((nz0+nz1,nz0+nz1))
-    H[:nz0,:nz0] = A.conj().T.dot(A)/wvar + np.eye(nz0)/rvar0
-    H[:nz0,nz0:] = -A.conj().T/wvar 
-    H[nz0:,:nz0] = -A/wvar 
-    H[nz0:,nz0:] = np.eye(nz1)*(1/wvar + 1/rvar1) 
-    if ns > 1:
-        g = np.zeros((nz0+nz1,ns))
-        g[:nz0,:] = -A.conj().T.dot(b)/wvar + r0/rvar0
-        g[nz0:,:] = b/wvar + r1/rvar1 
-    else:
-        g = np.zeros(nz0+nz1)
-        g[:nz0] = -A.conj().T.dot(b)/wvar + r0/rvar0
-        g[nz0:] = b/wvar + r1/rvar1 
-            
-    zhat_true = np.linalg.solve(H,g)
-    if ns > 1:
-        zhat0_true = zhat_true[:nz0,:]
-        zhat1_true = zhat_true[nz0:,:]
-    else:
-        zhat0_true = zhat_true[:nz0]
-        zhat1_true = zhat_true[nz0:]        
-    
-    zcov = np.diag(np.linalg.inv(H))
-    zhatvar0_true = np.mean(zcov[:nz0])
-    zhatvar1_true = np.mean(zcov[nz0:])
-    
-    # Compute the cost of the first order terms
-    cost_out = np.linalg.norm(zhat1_true-A.dot(zhat0_true)-b)**2/wvar
-    cost0 = np.linalg.norm(zhat0_true-r0)**2/rvar0
-    cost1 = np.linalg.norm(zhat1_true-r1)**2/rvar1
-    cost_true = cost_out+cost0+cost1
-    
-    # Compute the cost of the second order terms
-    if is_complex:
-        cscale = 1
-    else:
-        cscale = 2
-    cost_true += nz1*ns*np.log(cscale*np.pi*wvar)
-    if not map_est:
-        lam = np.linalg.eigvalsh(H)
-        cost_true -= ns*np.sum(np.log(cscale*np.pi/lam))
-    
-    cost_true /= cscale
+    When wvar > 0:
+        F(z0,z1) = D*[z1-A.dot(z0); z0; z1]  g=D*[b; r0; r1]
+        D = diag(1/sqrt([wvar; rvar0; rvar1]))
         
-    zhat, zhatvar, cost = est.est(r,rvar,return_cost=True)
-    zhat0, zhat1 = zhat
-    zhatvar0,zhatvar1 = zhatvar
-    
-    zerr0 = np.linalg.norm(zhat0-zhat0_true)    
-    zerr1 = np.linalg.norm(zhat1-zhat1_true)    
-    if verbose:
-        print("zhat error:    {0:12.4e}, {0:12.4e}".format(zerr0,zerr1))
-    if (zerr0 > tol) or (zerr1 > tol):
-        raise common.TestException("Error in first order terms")
-    
-    zerr0 = np.abs(zhatvar0-zhatvar0_true)
-    zerr1 = np.abs(zhatvar1-zhatvar1_true)
-    if verbose:    
-        print("zhatvar error: {0:12.4e}, {0:12.4e}".format(zerr0,zerr1))
-    if (zerr0 > tol) or (zerr1 > tol):
-        raise common.TestException("Error in second order terms")
-    
-    cost_err = np.abs(cost-cost_true)
-    if verbose:
-        print("cost error:    {0:12.4e}".format(cost_err))
-    if (zerr0 > tol) or (zerr1 > tol):
-        raise common.TestException("Error in cost evaluation")
+    """
+    def __init__(self,A,b,rvar,wvar,z0rep_axes,z1rep_axes,wrep_axes,\
+        shape0,shape1,is_complex):
+        self.A = A
+        self.b = b
+        self.shape0 = shape0
+        self.shape1 = shape1
+        self.n0 = np.prod(shape0)
+        self.n1 = np.prod(shape1)        
+        
+        # Compute scale factors
+        rvar0, rvar1 = rvar
+        self.rsqrt0 = common.repeat_axes(
+            np.sqrt(rvar0), self.shape0, z0rep_axes, rep=False)        
+        self.rsqrt1 = common.repeat_axes(
+            np.sqrt(rvar1), self.shape1, z1rep_axes, rep=False)
+        self.wvar_pos = np.all(wvar > 0)
+        if self.wvar_pos:
+            self.wsqrt = common.repeat_axes(
+                np.sqrt(wvar), self.shape1, wrep_axes, rep=False)
 
-def lin_two_test_mult(verbose=False):
-    """
-    Unit tests for the linear estimator class
+        # Compute dimensions of the transform F
+        if self.wvar_pos:                
+            nin = self.n0 + self.n1                        
+            nout = self.n0 + 2*self.n1
+        else:
+            nin = self.n0
+            nout = self.n0 + self.n1
+        self.shape = (nout,nin)
+        if is_complex:
+            self.dtype = np.dtype(complex)
+        else:
+            self.dtype = np.dtype(float)
+
+        
+    def unpack(self,zvec):
+        """
+        Unpacks the variables from vector for the CG estimation
+        """
+        z0 = zvec[:self.n0].reshape(self.shape0)
+        if self.wvar_pos:
+            z1 = zvec[self.n0:].reshape(self.shape1)
+        else:
+            z1 = self.A.dot(z0)
+        return z0,z1
+        
+    def pack(self,z0,z1):
+        """
+        Packs the variables from vector for the CG estimation to a vector
+        """        
+        if self.wvar_pos:            
+            zvec = np.hstack((z0.ravel(), z1.ravel()))
+        else:
+            zvec = z0.ravel()
+        return zvec  
     
-    This calls :func:`lin_two_test` with multiple different paramter values
-    """
-    lin_two_test(nz0=100,nz1=200,ns=10,map_est=True,verbose=verbose)
-    lin_two_test(nz0=200,nz1=100,ns=10,map_est=True,verbose=verbose)
-    lin_two_test(nz0=100,nz1=200,ns=1,map_est=True,verbose=verbose)
-    lin_two_test(nz0=200,nz1=100,ns=1,map_est=True,verbose=verbose)
-    lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=verbose)
-    lin_two_test(nz0=200,nz1=100,ns=10,map_est=False,verbose=verbose)
+    def get_tgt_vec(self,r):
+        """
+        Computes the target vector `g` in the above description
+        """
+        r0,r1 = r
+        g0 = 1/self.rsqrt0*r0
+        if self.wvar_pos:
+            gout = 1/self.wsqrt*np.broadcast_to(self.b,self.shape1)
+            g1 = 1/self.rsqrt1*r1            
+            g = np.hstack((gout.ravel(),g0.ravel(),g1.ravel()))
+        else:
+            g1 = 1/self.rsqrt1*(r1-self.b)
+            g = np.hstack((g0.ravel(),g1.ravel()))
+        return g
+                        
+        
+    def _matvec(self,r):
+        """
+        Forward multiplication for the operator `F` defined above
+        """
+        r0, r1 = self.unpack(r)
+        y0 = 1/self.rsqrt0*r0
+        y1 = 1/self.rsqrt1*r1
+        if self.wvar_pos:
+            yout = 1/self.wsqrt*(r1-self.A.dot(r0))
+            y = np.hstack((yout.ravel(), y0.ravel(), y1.ravel()))
+        else:
+            y = np.hstack((y0.ravel(), y1.ravel()))            
+        return y
+        
+    def _rmatvec(self,y):
+        """
+        Adjoint multiplication for the operator `F` defined above
+        """
+        if self.wvar_pos:
+            yout = np.reshape(y[:self.n1], self.shape1)
+            y0 = np.reshape(y[self.n1:self.n0+self.n1], self.shape0)
+            y1 = np.reshape(y[self.n0+self.n1:], self.shape1)
+            r0 = 1/self.rsqrt0*y0
+            r1 = 1/self.rsqrt1*y1
+            r0 -= 1/self.wsqrt*self.A.dotH(yout)
+            r1 += 1/self.wsqrt*yout
+            r = np.hstack((r0.ravel(), r1.ravel()))
+        else:
+            y0 = np.reshape(y[:self.n0], self.shape0)
+            y1 = np.reshape(y[self.n0:], self.shape1)            
+            r0 = 1/self.rsqrt0*y0
+            r0 += 1/self.rsqrt1*self.A.dotH(y1)
+            r = r0.ravel()
+        return r        
+        
 

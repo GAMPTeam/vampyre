@@ -1,5 +1,8 @@
 """
-test_suite.py:  Runs through tests
+test_suite.py:  Runs through tests.
+
+This is an old script for running tests.  Eventually, we will move all the unit 
+tests to the new unittest format.  
 """
 from __future__ import print_function
 
@@ -9,17 +12,17 @@ import os
 
 # ensure some directories are in our PYTHONPATH, ( relative to test dir)
 # The directory search does not appear to work in python 2.
-for d in ('.','..','sparse'):
+for d in ('.','..'):
     if sys.version[0] == '2':
         fd = d
     else:
-        fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
+        #fd = os.path.abspath( os.path.dirname(__file__) + os.path.sep + d )
+        fd = os.path.abspath( d )
     if not fd in sys.path:
         sys.path.append(fd)
         
 
 import vampyre as vp
-import vamp_sparse_test
 
 def test_version():
     vp.version_info()
@@ -27,18 +30,18 @@ def test_version():
     # Unit tests
     tests = [\
        ['common.utils.repeat_test', vp.common.utils.repeat_test], \
-       ['estim.gaussian.gauss_test', vp.estim.gaussian.gauss_test],\
+       #['estim.gaussian.gauss_test', vp.estim.gaussian.gauss_test],\
        ['estim.mixture.mix_test', vp.estim.mixture.mix_test],\
        ['trans.matrix.matrix_test', vp.trans.matrix.matrix_test],\
        ['estim.linear.lin_test_mult',vp.estim.linear.lin_test_mult],\
-       ['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
-       ['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
+       #['estim.discrete.discrete_test',vp.estim.discrete.discrete_test],\
+       #['estim.linear_two.lin_two_test_mult',vp.estim.linear_two.lin_two_test_mult],\
        ['estim.interval.gauss_integral_test',vp.estim.interval.gauss_integral_test],\
        ['estim.interval.hard_thresh_test',vp.estim.interval.hard_thresh_test],\
        ['estim.relu.relu_test',vp.estim.relu.relu_test],\
-       ['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
-       ['solver.mlvamp.mlvamp_probit_test',vp.solver.mlvamp.mlvamp_probit_test],\
-       ['vamp_sparse_test.sparse_inv',vamp_sparse_test.sparse_inv]\
+       #['solver.vamp.vamp_test_mult',vp.solver.vamp.vamp_test_mult],\
+       #['solver.mlvamp.mlvamp_probit_test',vp.solver.mlvamp.mlvamp_probit_test],\
+       #['vamp_sparse_test.sparse_inv',vamp_sparse_test.sparse_inv]\
     ]
     
     cnt = 0

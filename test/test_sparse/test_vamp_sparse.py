@@ -3,8 +3,13 @@ from __future__ import division
 vamp_sparse_test.py:  tests for VAMP for sparse recovery
 """
 
+# Add the path to the vampyre package and import it
+import env
+env.add_vp_path()
 import vampyre as vp
+
 import numpy as np
+import unittest
                    
 def sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29):    
     """
@@ -86,6 +91,19 @@ def sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29):
     # Check final error if test passed
     if mse[-1] > mse_tol:
         raise vp.common.TestException("MSE exceeded expected value")
+        
+
+class TestCases(unittest.TestCase):
+    def test_sparse_inv(self):
+        """
+        Calls the sparse inverse test
+        """
+        sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29)    
+        
+        
+if __name__ == '__main__':    
+    unittest.main()
+    
         
 
 
