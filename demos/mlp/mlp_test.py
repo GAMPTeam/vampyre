@@ -38,10 +38,21 @@ parser.add_argument('-ntrial',action='store',default=20,type=int,\
 parser.add_argument('-ny',action='store',nargs='+',\
     default=[10,30,50,100,200,300],type=int,\
     help='list of values of ny')
+parser.add_argument('-damp',action='store',default=0.7,type=float,\
+    help='damping on the first-order terms for small networks')
+parser.add_argument('-damp_var',action='store',default=0.5,type=float,\
+    help='damping on the second-order terms for small networks')
+parser.add_argument('-save_dat', dest='save_dat', action='store_true',\
+    help="Save results in a pickle file")
+parser.set_defaults(save_dat=False)    
     
+        
 args = parser.parse_args()
 nit = args.nit
 ntrial = args.ntrial
+damp = args.damp
+damp_var = args.damp_var
+save_dat = args.save_dat
 ny_test = np.array(args.ny)
 ntest = len(ny_test)
 
@@ -50,23 +61,28 @@ ntest = len(ny_test)
 
 class MLPSim:
 
-    def __init__(self,nit=50,rvarmin=0):
+    def __init__(self,nit=50,rvarmin=0,damp=0.95,damp_var=0.95,ny=300):
         """
         Class for running one MLP simulation
         
         :param nit:  Number of MLVAMP iterations
+        :param damp:  Damping on the first-order terms 
+        :param damp_var:  Damping on the second-order terms
         :param rvarmin:  Minimum variance.
+        :param ny:  Number of output measurements
         """
         
         # Dimensions
         self.nin  = 20           # dimension of the latent variables, dim(z0)
         self.nhid = [100,500]    # dimension of the hidden units in the subsequent layers, dim(z_1)=dim(z_2)=100, dim(z_3)=dim(z_4)=500,
         self.nx = 784            # dimension of the unknown signal, dim(x)=dim(z_5)
-        self.ny = 300            # number of measurements = dimension(y)
+        self.ny = ny             # number of measurements = dimension(y)
         
         # Save configurable parameters
         self.nit = nit
         self.rvarmin = rvarmin
+        self.damp = damp
+        self.damp_var = damp_var
         
         # Other parameters
         self.ns = 10             # Number of samples to generate
@@ -129,8 +145,8 @@ class MLPSim:
         
         # Initial estimator
         est0 = vp.estim.GaussEst(0,1,zs[0].shape)
-        est_list.append(est0)
-        
+        est_list.append(est0)          
+            
         for i in range(mlp.nlayers):
             
             # Get shape
@@ -160,11 +176,9 @@ class MLPSim:
         # Create the msg handlers
         nvar = 2*mlp.nlayers+1
         msg_hdl_list = []
-        damp_var = 0.5
-        damp = 0.7
         for i in range(nvar):
             msg_hdl = vp.estim.MsgHdlSimp(shape=zs[i].shape,\
-                damp=damp,damp_var=damp_var,rvar_min=self.rvarmin)
+                damp=self.damp,damp_var=self.damp_var,rvar_min=self.rvarmin)
             msg_hdl_list.append(msg_hdl)
             
         
@@ -211,12 +225,18 @@ mse_pred = np.zeros((nit2,nvar,ntrial,ntest))
 
 for itest in range(ntest):
     
-    # Create the MLP simulation object
-    mlpsim = MLPSim(nit=50,rvarmin=0.001)
+    # Set damping.  We apply the additional damping only for small networks
     ny = ny_test[itest]
-    mlpsim.ny = ny
-  
+    if (ny < 100):
+        damp0 = damp
+        damp_var0 = damp_var
+    else:
+        damp0 = 0.95
+        damp_var0 = 0.95
     
+    # Create the MLP simulation object
+    mlpsim = MLPSim(nit=nit,rvarmin=0.001,damp=damp0,damp_var=damp_var0,ny=ny)    
+  
     for it in range(ntrial):
         
         # Run it
@@ -269,7 +289,7 @@ for i in range(ntest):
         mse_act_med1[ivar,i]-mse_pred_med1[ivar,i]))
 
 # Plot final MSE vs. number of measurements
-if 1:
+if 0:
     plt.plot(ny_test, mse_act_med1[ivar,:],'o', linewidth=2)
     plt.plot(ny_test, mse_pred_med1[ivar,:],'-s', linewidth=2)
     plt.legend(['actual', 'SE'])
@@ -279,7 +299,10 @@ if 1:
     
 
 # Save results
-fp = open('randmlp_sim.pkl', 'wb')
-pickle.dump([ny_test,mse_act,mse_pred], fp)
-fp.close()
-print("Results saved in randmlp_sim.pkl")
+if save_dat:
+    fp = open('randmlp_sim.pkl', 'wb')
+    pickle.dump([ny_test,mse_act,mse_pred], fp)
+    fp.close()
+    print("Results saved in randmlp_sim.pkl")
+else:
+    print("Results not saved.  Used [-save_dat] option.")
