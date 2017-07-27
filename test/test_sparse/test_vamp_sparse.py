@@ -98,7 +98,7 @@ class TestCases(unittest.TestCase):
         """
         Calls the sparse inverse test
         """
-        sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=True, mse_tol=-29)    
+        sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29)    
         
         
 if __name__ == '__main__':    

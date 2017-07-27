@@ -12,8 +12,8 @@ env.add_vp_path()
 import vampyre as vp
 
             
-def discrete_test(zshape=(1000,10), verbose=False, nvals=3,\
-             tol_init=1e-3, tol_est=0.2,is_complex=False):
+def discrete_test(zshape=(1000,10), verbose=False, nvals=10,\
+             tol_init=1e-3, tol_est=0.15,is_complex=False):
     """
     Unit test for the :class:`DiscreteEst` class
     
@@ -93,9 +93,12 @@ def discrete_test(zshape=(1000,10), verbose=False, nvals=3,\
 
 
 class TestCases(unittest.TestCase):
-    def test_discrete(self):
-        discrete_test(is_complex=False)
-        discrete_test(is_complex=True)
+    def test_discrete_real(self):
+        verbose = False
+        discrete_test(is_complex=False, verbose=verbose)
+    def test_discrete_complex(self):
+        verbose = False       
+        discrete_test(is_complex=True, verbose=verbose)
         
 if __name__ == '__main__':    
     unittest.main()
