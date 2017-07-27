@@ -74,6 +74,29 @@ def repeat_sum(u,shape,rep_axes):
     urep = repeat_axes(u,shape,rep_axes,rep=False)
     usum = np.sum(urep)*np.product(shape_vec[rep_vec])
     return usum
+    
+def repeat_const(u,shape,rep_axes):
+    """
+    Creates a constant matrix with shape with the repeat axes removed.
+    
+    :param u:  constant to be repeated
+    :param shape:  shape of the array before the axes removed
+    :param rep_axes:  axes to remove
+    """
+    # Find the axes to repeat
+    ndim = len(shape)
+    axes_spec = [i for i in range(ndim) if i not in rep_axes]
+    
+    # Reshape the array u to the size with 1's in the
+    # dimensions to be repeated
+    if axes_spec == []:
+        urep = u
+    else:
+        shape_vec = np.array(shape,dtype=int)
+        shape_rep = shape_vec[axes_spec]
+        urep = np.repeat(u, shape_rep)
+    return urep
+
         
     
 def repeat_test(verbose=False, tol=1e-8, raise_exception=True):
@@ -105,3 +128,15 @@ def repeat_test(verbose=False, tol=1e-8, raise_exception=True):
     
     
                 
+u = 3
+shape = (3,4,5)
+rep_axes = (0,2)
+ndim = len(shape)
+axes_spec = [i for i in range(ndim) if i not in rep_axes]
+if axes_spec == []:
+    urep = u
+else:
+    shape_vec = np.array(shape,dtype=int)
+    shape_rep = shape_vec[axes_spec]
+    urep = np.repeat(u, shape_rep)
+

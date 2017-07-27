@@ -19,14 +19,15 @@ if not 'mnist' in locals():
     mnist = input_data.read_data_sets('MNIST')
     
 # Build the VAE
-vae_net = vae.VAE(enc_dim, dec_dim, n_steps=int(20000))
+#vae_net = vae.VAE(enc_dim, dec_dim, n_steps=int(20000))
+vae_net = vae.VAE(enc_dim, dec_dim, n_steps=int(100))
 vae_net.build_graph()
 
-if 0:        
+if 1:        
     vae_net.train(mnist,restore=False)
 
     
-if 1:
+if 0:
     
     with tf.Session() as sess:
         vae_net.restore(sess)

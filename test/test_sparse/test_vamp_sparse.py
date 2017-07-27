@@ -69,7 +69,7 @@ def sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29):
 
     # Create the variance handler
     msg_hdl = vp.estim.MsgHdlSimp(map_est=map_est, is_complex=is_complex,\
-                                  shape=zshape,damp=0.95)
+                                  shape=zshape)
 
     # Create and run the solver
     solver = vp.solver.Vamp(est_in,est_out,hist_list=['zhat'],\
@@ -84,7 +84,7 @@ def sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29):
     for it in range(nit):
         zerr = np.mean(np.abs(zhat_hist[it]-z)**2)
         mse[it] = 10*np.log10(zerr/zpow)
-    
+            
     if verbose or (mse[-1] > mse_tol):
         print("Final MSE = {0:f}".format(mse[-1]))        
     
@@ -98,7 +98,7 @@ class TestCases(unittest.TestCase):
         """
         Calls the sparse inverse test
         """
-        sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29)    
+        sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=True, mse_tol=-29)    
         
         
 if __name__ == '__main__':    

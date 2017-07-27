@@ -3,11 +3,6 @@ test_wavelet.py:  Test suite for the wavelet module
 """
 from __future__ import print_function, division
 
-# Removes the warning that "Tensorflow library was not compiled to use SSE..."
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
-
-import tensorflow as tf
 import unittest
 import numpy as np
 

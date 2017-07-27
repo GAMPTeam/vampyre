@@ -36,7 +36,9 @@ class LinEstim(Estim):
         Default is 'all'.
     :param Boolean is_complex:  indiates if :math:`z` is complex    
     :param Boolean map_est:  indicates if estimator is to perform MAP 
-        or MMSE estimation. This is used for the cost computation.      
+        or MMSE estimation. This is used for the cost computation.  
+    :param rvar_init:  Initial prior variance used in the 
+        :code:`est_init` method.
        
     :note:  The linear operator :code:`A` must have :code:`svd_avail==True`.
        In the future, if an SVD is not available, we will use conjugate
@@ -49,7 +51,7 @@ class LinEstim(Estim):
     """    
     def __init__(self,A,y,wvar=0,\
                  wrep_axes='all', zrep_axes=(0,),map_est=False,\
-                 is_complex=False):
+                 is_complex=False,rvar_init=1e5):
         
         Estim.__init__(self)
         self.A = A
@@ -58,6 +60,7 @@ class LinEstim(Estim):
         self.map_est = map_est
         self.is_complex = is_complex
         self.cost_avail = True
+        self.rvar_init = rvar_init
         
         # Get the input and output shape
         self.zshape = A.shape0        
@@ -125,7 +128,7 @@ class LinEstim(Estim):
         
         rdim = np.product(sshape)/np.product(shape0)
         zmean = self.A.Vsvd(q)
-        zvar = rdim*qvar_mean
+        zvar = rdim*qvar_mean + (1-rdim)*self.rvar_init
         
         # Exit if cost does not need to be computed
         if not return_cost:

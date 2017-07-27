@@ -115,10 +115,9 @@ def probit_test(nz0=512,nz1=4096,ncol=10, snr=30, verbose=False, plot=False,\
     est_list = [est_in,est_lin,est_out]
     
     # Create the message handler
-    damp=0.95
-    rvarmin = 0.00
-    msg_hdl0 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape0,damp=damp,rvar1_min=rvarmin) 
-    msg_hdl1 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape1,damp=damp,rvar1_min=rvarmin) 
+    damp=1
+    msg_hdl0 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape0,damp=damp) 
+    msg_hdl1 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape1,damp=damp) 
     msg_hdl_list  = [msg_hdl0,msg_hdl1]
     
     ztrue = [z0,z1]
@@ -173,8 +172,8 @@ class TestCases(unittest.TestCase):
         """
         Calls the probit estimation test case
         """
-        probit_test(ncol=10,est_meth='cg')    
-        probit_test(ncol=10,est_meth='svd')
+        #probit_test(ncol=10,est_meth='cg')    
+        probit_test(ncol=10,est_meth='svd',plot=True)
         
         
 if __name__ == '__main__':    

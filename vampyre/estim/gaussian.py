@@ -87,6 +87,8 @@ class GaussEst(Estim):
             clog = np.log(2*np.pi*self.zvar)
             if avg_var_cost:
                 cost = repeat_sum(clog, self.shape, self.var_axes)
+            else:
+                cost = clog
         else:
             cost = 0
         if not self.is_complex:

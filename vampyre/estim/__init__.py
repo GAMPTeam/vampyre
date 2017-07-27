@@ -5,9 +5,11 @@ from vampyre.estim.mixture import MixEst
 from vampyre.estim.linear import LinEstim
 from vampyre.estim.linear_two import LinEstimTwo
 from vampyre.estim.msg import MsgHdl, MsgHdlSimp, ListMsgHdl
+from vampyre.estim.msg_robust import MsgHdlAdmm
 from vampyre.estim.discrete import DiscreteEst
 from vampyre.estim.interval import HardThreshEst
 from vampyre.estim.stack import StackEstim
 from vampyre.estim.relu import ReLUEstim
+from vampyre.estim.scalarnl import ScalarNLEstim, LogisticEstim
 
 

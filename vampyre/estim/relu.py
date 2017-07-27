@@ -22,8 +22,9 @@ class ReLUEstim(Estim):
     :param shape:  shape of :math:`z_0` and :math:`z_1`
     :param z0rep_axes:  axes on which the variance for :math:`z_0` is averaged
     :param z1rep_axes:  axes on which the variance for :math:`z_1` is averaged
+    :param map_est: Flag indicating if estimation is MAP or MMSE.
     """        
-    def __init__(self,shape,z0rep_axes=(0,), z1rep_axes=(0,)):
+    def __init__(self,shape,z0rep_axes=(0,), z1rep_axes=(0,), map_est=False):
         Estim.__init__(self)
         self.shape = shape
         ndim = len(shape)
@@ -34,6 +35,7 @@ class ReLUEstim(Estim):
         self.z0rep_axes = z0rep_axes
         self.z1rep_axes = z1rep_axes
         self.cost_avail = True
+        self.map_est = map_est
         
         # Initial variances
         self.zvar0_init= np.Inf
@@ -77,8 +79,7 @@ class ReLUEstim(Estim):
             return zhat, zvar, cost
         else:
             return zhat, zvar            
-    
-
+            
     def est(self,r,rvar,return_cost=False):
         """
         Estimation function
@@ -93,9 +94,69 @@ class ReLUEstim(Estim):
          
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior 
         mean, variance and optional cost.
+        """        
+        if self.map_est:
+            return self.est_map(r,rvar,return_cost)
+        else:
+            return self.est_mmse(r,rvar,return_cost)
+                        
+    
+    def est_map(self,r,rvar,return_cost):
         """
+        MAP Estimation
+        In this case,  we wish to minimize
+            cost = (z0-r0)^2/(2*rvar0) + (z1-r1)^2/(2*rvar1)
         
+        where z1 = max(0,z0) 
         """
+        # Unpack the terms
+        r0, r1 = r
+        rvar0, rvar1 = rvar
+        
+        # Clip variances
+        rvar1 = np.minimum(1e8*rvar0, rvar1)
+        
+        # Reshape the variances
+        rvar0 = common.repeat_axes(rvar0,self.shape,self.z0rep_axes)
+        rvar1 = common.repeat_axes(rvar1,self.shape,self.z1rep_axes)
+        
+        # Positive case:  z0 >= 0 and hence z1=z0
+        z0p = np.maximum(0, (rvar0*r1 + rvar1*r0)/(rvar0 + rvar1))
+        z1p = z0p
+        zvar0p = rvar0*rvar1/(rvar0+rvar1)
+        zvar1p = zvar0p
+        costp = 0.5*((z0p-r0)**2/rvar0 + (z1p-r1)**2/rvar1)
+        
+        # Negative case:  z0 <= 0 and hence z1 = 0
+        z0n = np.minimum(0, r0)
+        z1n = 0
+        zvar0n = rvar0
+        zvar1n = 0
+        costn = 0.5*((z0n-r0)**2/rvar0 + (z1n-r1)**2/rvar1)
+        
+        # Find lower cost and select the correct choice for each element        
+        Ip = (costp < costn)
+        zhat0 = z0p*Ip + z0n*(1-Ip)
+        zhat1 = z1p*Ip + z1n*(1-Ip)
+        zhatvar0 = zvar0p*Ip + zvar0n*(1-Ip)
+        zhatvar1 = zvar1p*Ip + zvar1n*(1-Ip)
+        cost = np.sum(costp*Ip + costn*(1-Ip))
+                        
+        # Average the variance over the specified axes
+        zhatvar0 = np.mean(zhatvar0,axis=self.z0rep_axes)
+        zhatvar1 = np.mean(zhatvar1,axis=self.z1rep_axes)
+        zhatvar = [zhatvar0,zhatvar1]
+        
+        # Pack the first order terms
+        zhat = [zhat0,zhat1]
+
+        if not return_cost:        
+            return zhat, zhatvar
+        else:
+            return zhat, zhatvar, cost
+        
+    def est_mmse(self,r,rvar,return_cost):                
+        """        
         In the MMSE estimation case, we wish to estimate
         z0 and z1 with priors zi = N(ri,rvari) and z1=f(z0)
         
@@ -114,11 +175,12 @@ class ReLUEstim(Estim):
            qn(z0) = exp(Amax)*Cn*exp(-(z0-rn)^2/(2*zvarn))/sqrt(2*pi)        
            
         """
-                 
+
+
         # Unpack the terms
         r0, r1 = r
         rvar0, rvar1 = rvar
-        
+                
         # Reshape the variances
         rvar0 = common.repeat_axes(rvar0,self.shape,self.z0rep_axes)
         rvar1 = common.repeat_axes(rvar1,self.shape,self.z1rep_axes)
@@ -134,7 +196,12 @@ class ReLUEstim(Estim):
             Amax = 0
                         
         else:
-                             
+            
+            # Compute the MAP estimate
+            zhat_map, zvar_map = self.est_map(r,rvar,return_cost=False)
+            zhat0_map, zhat1_map = zhat_map
+            zvar0_map, zvar1_map = zvar_map
+                            
             # Compute the conditional Gaussian terms for z > 0 and z < 0
             zvarp = rvar0*rvar1/(rvar0+rvar1)
             zvarn = rvar0
@@ -154,14 +221,25 @@ class ReLUEstim(Estim):
         zp = Cp*gauss_integral(0, np.Inf, rp, zvarp)
         zn = Cn*gauss_integral(-np.Inf, 0, rn, zvarn)
         
+        # Find poorly conditioned points        
+        Ibad = (zp[0] + zn[0] < 1e-6)
+        zpsum = zp[0] + zn[0] + Ibad
+        
         # Compute mean        
-        zhat0 = (zp[1] + zn[1])/(zp[0] + zn[0])
-        zhat1 = zp[1]/(zp[0] + zn[0])
-        zhat = [zhat0,zhat1]     
+        zhat0 = (zp[1] + zn[1])/zpsum
+        zhat1 = zp[1]/zpsum
         
         # Compute the variance
-        zhatvar0 = (zp[2] + zn[2])/(zp[0]+zn[0]) - zhat0**2
-        zhatvar1 = zp[2]/(zp[0]+zn[0]) - zhat1**2
+        zhatvar0 = (zp[2] + zn[2])/zpsum - zhat0**2
+        zhatvar1 = zp[2]/zpsum - zhat1**2
+        
+        # Replace bad points with MAP estimate
+        if 1:
+            zhat0 = zhat0*(1-Ibad) + zhat0_map*Ibad
+            zhat1 = zhat1*(1-Ibad) + zhat1_map*Ibad
+            zhatvar0 = zhatvar0*(1-Ibad) + zvar0_map*Ibad
+            zhatvar1 = zhatvar1*(1-Ibad) + zvar1_map*Ibad
+        zhat = [zhat0,zhat1]     
         
         # Average the variance over the specified axes
         zhatvar0 = np.mean(zhatvar0,axis=self.z0rep_axes)
@@ -177,68 +255,7 @@ class ReLUEstim(Estim):
                  = -Amax - log(zp[0] + zn[0])        
         """
         nz = np.prod(self.z0rep_axes)
-        cost = -nz*(Amax - np.mean(np.log(zp[0] + zn[0])))
+        cost = -nz*np.mean(Amax - np.log(zpsum))
         return zhat, zhatvar, cost
-
-def relu_test(zshape=(1000,10),tol=0.15,verbose=False):
-    """
-    ReLUEstim unit test.
-    
-    In this test, a matrix :math:`z_0=r_0+w_0` is generated with iid Gaussian 
-    components, :math:z_1 = \\max(0,z_0)` is the ReLU ouptut of :math:`z_0`
-    and :math:`r_1 = z_1 + w_1`.  The ReLU estimator is then used to
-    estimate :math:`z_i` from :math:`r_i`.  The test passes if the 
-    predicted variance matches the true variance with a specified tolerance.
-            
-    :param zshape: shape of :math:`z_0` and :math:`z_1`.
-    :param tol:  Tolerance for test test to pass
-    :param Boolean verbose:  prints results.  
-    """
-     
-    # Get number of columns
-    ns = zshape[1]
         
-    # Set random parameters
-    rvar0 = np.power(10,np.random.uniform(-2,1,ns))
-    rvar1 = np.power(10,np.random.uniform(-2,1,ns))
-        
-    # Construct random input
-    r0 = np.random.normal(0,1,zshape) 
-    z0 = r0 + np.random.normal(0,1,zshape)*np.sqrt(rvar0)[None,:]
-    
-    # Perform ReLU and add noise
-    z1 = np.maximum(z0,0)
-    r1 = z1 + np.random.normal(0,1,zshape)*np.sqrt(rvar1)[None,:]
-    
-    # Construct the estimator
-    relu = ReLUEstim(shape=zshape)
-    
-    # Repeath the variances
-    r = [r0,r1]
-    rvar = [rvar0,rvar1]
-    zhat, zhatvar, cost = relu.est(r,rvar,return_cost=True)
-    
-    # Unpack the estimates
-    zhat0, zhat1 = zhat
-    zhatvar0, zhatvar1 = zhatvar
-    
-    # Compute the true error and compare to the 
-    zerr0 = np.mean((zhat0-z0)**2,axis=0)
-    zerr1 = np.mean((zhat1-z1)**2,axis=0)
-    
-    # Compute average difference
-    diff0 = np.mean(np.maximum(zhatvar0/zerr0,zerr0/zhatvar0))-1
-    diff1 = np.mean(np.maximum(zhatvar1/zerr1,zerr1/zhatvar1))-1
-    
-    # Check if fails
-    fail = (diff0 > tol) or (diff1 > tol)    
-    if verbose or fail:
-        print("")
-        print("z0 err: act: {0:12.4e} pred: {1:12.4e} diff: {2:12.4e}".format(\
-            np.mean(zerr0),np.mean(zhatvar0),diff0))
-        print("z1 err: act: {0:12.4e} pred: {1:12.4e} diff: {2:12.4e}".format(\
-            np.mean(zerr1),np.mean(zhatvar1),diff1)) 
-    if fail:
-        raise common.TestException("Posterior predicted variance does not match "+\
-            "actual variance within tolerance")
     
