@@ -1,5 +1,8 @@
 from setuptools import setup
 
+import numpy as np
+np.random.seed(1) # make the tests repeatable
+
 setup(name = 'vampyre',
       version = '0.0',
       description = 'Vampyre is a Python package for generalized Approximate Message Passing',
