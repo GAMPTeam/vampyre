@@ -11,7 +11,6 @@ import vampyre as vp
 # Add other packages
 import numpy as np
 import unittest
-import matplotlib.pyplot as plt
 
 def debias_mse(zhat,ztrue):
     """
@@ -156,6 +155,7 @@ def probit_test(nz0=512,nz1=4096,ncol=10, snr=30, verbose=False, plot=False,\
             
     
     if plot:
+        import matplotlib.pyplot as plt
         t = np.array(range(nit2))
         for ivar in range(nvar):
             plt.subplot(1,nvar,ivar+1)
@@ -173,7 +173,7 @@ class TestCases(unittest.TestCase):
         Calls the probit estimation test case
         """
         #probit_test(ncol=10,est_meth='cg')    
-        probit_test(ncol=10,est_meth='svd',plot=True)
+        probit_test(ncol=10,est_meth='svd',plot=False)
         
         
 if __name__ == '__main__':    
