@@ -70,7 +70,8 @@ class InpaintMeth:
 class MapInpaint(InpaintMeth):
     def __init__(self,xtrue,param_fn='param.p', erase_pix0=280,\
         erase_pix1=560, n_steps=1000, recon_mode='mmse',\
-        nsteps_init=500, lr_adam=0.01, lr_sgd=0.001,nsteps_burn=500):
+        nsteps_init=500, lr_adam=0.01, lr_sgd=0.001,nsteps_burn=500,\
+        restore=False):
         """
         Inpainting method based on the VAE-based likelihood.  Two methods are 
         supported.
@@ -91,6 +92,7 @@ class MapInpaint(InpaintMeth):
         self.lr_adam = lr_adam
         self.lr_sgd = lr_sgd
         self.nsteps_burn = nsteps_burn
+        self.restore = restore
     
         
     def reconstruct(self):
@@ -109,7 +111,7 @@ class MapInpaint(InpaintMeth):
         self.vae_net = vae_net
         
         # Run the reconstruction optimization
-        vae_net.reconstruct(self.xtrue,restore=False)
+        vae_net.reconstruct(self.xtrue,restore=self.restore)
         
         if self.recon_mode == 'mmse':
             """

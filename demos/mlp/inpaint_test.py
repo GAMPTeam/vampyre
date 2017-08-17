@@ -47,6 +47,10 @@ parser.add_argument('-plot', dest='plot_results', action='store_true',\
     help="Plots results (assuming all methods have been done)")
 parser.set_defaults(plot_results=False)    
 
+parser.add_argument('-restore', dest='restore', action='store_true',\
+    help="Continue from previous run in SGLD or MAP")
+parser.set_defaults(plot_results=False)    
+
 parser.add_argument('-lr_sgd',action='store',default=0.001,type=float,\
     help='step-size for SGLD')
 parser.add_argument('-nsteps_sgld',action='store',default=10000,type=int,\
@@ -68,7 +72,7 @@ vamp_admm = args.vamp_admm
 lr_sgd = args.lr_sgd
 nsteps_sgld = args.nsteps_sgld
 nsteps_burn = args.nsteps_burn
-
+restore = args.restore
 
 # Data dimensions
 npix = 784  # number of pixels per image
@@ -117,7 +121,7 @@ if run_sgld:
     print("Running SGLD...")
     map_inpaint = MapInpaint(xtrue,erase_pix0=280, erase_pix1=560,\
         nsteps_init=500, n_steps=nsteps_sgld,lr_adam=0.01,lr_sgd=lr_sgd,\
-        nsteps_burn=nsteps_burn)
+        nsteps_burn=nsteps_burn,restore=restore)
     map_inpaint.reconstruct()
     xhat_sgld = map_inpaint.xhat
     zhat0_sgld = map_inpaint.zhat0
