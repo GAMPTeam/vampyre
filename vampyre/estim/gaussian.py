@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 from vampyre.common.utils import repeat_axes, repeat_sum
-from vampyre.common.utils import TestException
+from vampyre.common.utils import TestException, VpException
 from vampyre.estim.base import Estim
 
 class GaussEst(Estim):
@@ -29,10 +29,15 @@ class GaussEst(Estim):
     :param Boolean is_complex:  indiates if :math:`z` is complex    
     :param Boolean map_est:  indicates if estimator is to perform MAP 
         or MMSE estimation. This is used for the cost computation.
+    :param Boolean tune_zvar:  indicates if :code:`zvar` is to be
+        estimated via EM
+    :param Boolean tune_rvar:  indicates if the proximal variance
+        :code:`rvar` is estimated.
     """    
-    def __init__(self, zmean, zvar, shape, 
-                 var_axes = (0,), zmean_axes='all',
-                 is_complex=False, map_est=False):
+    def __init__(self, zmean, zvar, shape,\
+                 var_axes = (0,), zmean_axes='all',\
+                 is_complex=False, map_est=False, tune_zvar=False,\
+                 tune_rvar=False):
         Estim.__init__(self)
         self.zmean = zmean
         self.zvar = zvar
@@ -42,6 +47,8 @@ class GaussEst(Estim):
         self.shape = shape if (type(shape) is not int) else (shape,)
         self.var_axes = var_axes
         self.zmean_axes = zmean_axes
+        self.tune_zvar = tune_zvar
+        self.tune_rvar = tune_rvar
         
         ndim = len(self.shape)
         if self.var_axes == 'all':
@@ -125,6 +132,13 @@ class GaussEst(Estim):
             zhatvar = repeat_axes(zhatvar,self.shape,self.var_axes) 
         
         zhat = gain*(r-self.zmean) + self.zmean
+        
+        # EM tuning
+        if self.tune_zvar:
+            if not avg_var_cost:
+                raise VpException("must use variance averaging when using auto-tuning")
+            self.zvar = np.mean(np.abs(zhat-self.zmean)**2, self.var_axes) +\
+                zhatvar
         
         if not return_cost:                
             return zhat, zhatvar

@@ -250,28 +250,16 @@ class MLVampAdmm(Solver):
             # Update the variances
             damp_var = msg_hdl.damp_var   
             self.it += 1
-            if self.it < 1000:
+            if 1:
                 gamfwd = (1-damp_var)/self.rvarfwd[i] +\
                     damp_var*(1/self.zhatvarfwd[i] - 1/self.rvarrev[i])
                 self.sfwd[i] *= 1/gamfwd/self.rvarfwd[i]
-                self.rvarfwd[i] = 1/gamfwd*msg_hdl.var_scale
+                self.rvarfwd[i] = 1/gamfwd
                 gamrev = (1-damp_var)/self.rvarrev[i] +\
                     damp_var*(1/self.zhatvarrev[i] - 1/self.rvarfwd[i])
                 self.sfwd[i] *= 1/gamrev/self.rvarrev[i]                    
-                self.rvarrev[i] = 1/gamrev*msg_hdl.var_scale
-                
-                
-            if 0:
-                for j in [0,1]:
-                    if self.con[i,j] > self.fgrad[i,j]:
-                        scale = 1/(1+damp_var)
-                    else:
-                        scale = (1+damp_var)
-                    if j==0:
-                        self.rvarfwd[i] *= scale
-                    else:
-                        self.rvarrev[i] = scale*self.rvarrev[i]
-                        
+                self.rvarrev[i] = 1/gamrev
+                            
         
     def add_cost(self):
         """

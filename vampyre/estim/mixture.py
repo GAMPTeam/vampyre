@@ -140,8 +140,10 @@ class MixEst(Estim):
         for i in range(ncomp):
             p_list[i] /= psum        
         
-        # Save the probability
+        # Save the probability, and conditional means and variances
         self.prob = p_list
+        self.zmean_list = zmean_list
+        self.zvar_list = zvar_list
         
         # Compute prior mean and variance
         zmean = np.zeros(self.shape)

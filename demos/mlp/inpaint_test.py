@@ -37,11 +37,16 @@ parser.set_defaults(run_sgld=False)
 
 parser.add_argument('-vamp_map', dest='vamp_map_est', action='store_true',\
     help="Uses MAP estimation for VAMP (default is MMSE)")
-parser.set_defaults(vamp_map_est=False)
+parser.set_defaults(vamp_map_est=True)
+
+parser.add_argument('-vamp_admm', dest='vamp_admm', action='store_true',\
+    help="Use ADMM solver for VAMP")
+parser.set_defaults(vamp_admm=True)
+
 
 parser.add_argument('-plot', dest='plot_results', action='store_true',\
     help="Plots results (assuming all methods have been done)")
-parser.set_defaults(plot_results=False)    
+parser.set_defaults(plot_results=True)    
     
 args = parser.parse_args()
 
@@ -52,6 +57,7 @@ run_sgld = args.run_sgld
 run_vamp = args.run_vamp
 vamp_map_est = args.vamp_map_est
 plot_results = args.plot_results
+vamp_admm = args.vamp_admm
 
 
 # Data dimensions
@@ -151,7 +157,7 @@ if run_vamp:
     else:
         n_steps = 100        
     vamp_inpaint = VAMPInpaint(xtrue,erase_pix0=280, erase_pix1=560,\
-        n_steps=n_steps, map_est=vamp_map_est)
+        n_steps=n_steps, map_est=vamp_map_est, admm=vamp_admm)
     vamp_inpaint.reconstruct()
     xhat_vamp = vamp_inpaint.xhat
     zhatvar = vamp_inpaint.zhatvar
@@ -212,6 +218,6 @@ if plot_results:
                 
 
     # Create figure
-    plt.show()
+    #plt.show()
     plt.savefig("mnist_inpaint.png")
     print("Images stored in mnist_inpaint.png")

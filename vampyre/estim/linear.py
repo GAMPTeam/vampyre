@@ -34,6 +34,8 @@ class LinEstim(Estim):
         Default is 'all'.  
     :param zrep_axes:  The axes on which the input variance is repeated.
         Default is 'all'.
+    :param tune_wvar:  Enables tuning of noise level.  In this case,
+        :code:`wvar` is used as an initial condition.
     :param Boolean is_complex:  indiates if :math:`z` is complex    
     :param Boolean map_est:  indicates if estimator is to perform MAP 
         or MMSE estimation. This is used for the cost computation.  
@@ -51,7 +53,7 @@ class LinEstim(Estim):
     """    
     def __init__(self,A,y,wvar=0,\
                  wrep_axes='all', zrep_axes=(0,),map_est=False,\
-                 is_complex=False,rvar_init=1e5):
+                 is_complex=False,rvar_init=1e5,tune_wvar=False):
         
         Estim.__init__(self)
         self.A = A
@@ -61,6 +63,7 @@ class LinEstim(Estim):
         self.is_complex = is_complex
         self.cost_avail = True
         self.rvar_init = rvar_init
+        self.tune_wvar = tune_wvar
         
         # Get the input and output shape
         self.zshape = A.shape0        
@@ -200,6 +203,8 @@ class LinEstim(Estim):
             cost = self.ypnorm + np.sum(err/wvar1)
         else:
             cost = 0
+            
+                      
         
         # Add the MAP input cost
         err = np.abs(q-qbar)**2
@@ -221,6 +226,12 @@ class LinEstim(Estim):
         # Scale for real case
         if not self.is_complex:
             cost = 0.5*cost            
+            
+        # Update the variance estimate if tuning is enabled
+        if self.tune_wvar:
+            yerr = np.abs(self.y - self.A.Usvd(s1*q))**2
+            self.wvar = np.mean(yerr, self.wrep_axes) + np.mean(qvar*(np.abs(s1)**2),self.wrep_axes)
+                
         return zhat, zhatvar, cost
                           
         

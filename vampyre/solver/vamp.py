@@ -8,9 +8,9 @@ import numpy as np
 import time
 
 # Import other subpackages
-import vampyre.estim as estim
-import vampyre.trans as trans
-import vampyre.common as common
+#import vampyre.estim as estim
+#import vampyre.trans as trans
+#import vampyre.common as common
 
 # Import methods and classes from the same vampyre sub-package
 from vampyre.solver.base import Solver
@@ -127,6 +127,7 @@ class Vamp(Solver):
                     - self.var_cost2 + self.msg_hdl.Hgauss(self.zvar1)
             t2 = time.time()
             self.time_est1 = t2-t1
+            self.time_iter = t2-t0
             
             # Print progress
             if self.prt_period > 0:

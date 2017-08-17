@@ -3,4 +3,5 @@ from vampyre.trans.base import LinTrans
 from vampyre.trans.matrix import MatrixLT
 from vampyre.trans.tflintrans import TFLinTrans
 from vampyre.trans.wavelet import Wavelet2DLT
+from vampyre.trans.randmat import rand_rot_invariant_mat
 

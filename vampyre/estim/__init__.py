@@ -10,5 +10,6 @@ from vampyre.estim.interval import HardThreshEst
 from vampyre.estim.stack import StackEstim
 from vampyre.estim.relu import ReLUEstim
 from vampyre.estim.scalarnl import ScalarNLEstim, LogisticEstim
+from vampyre.estim.gmm import GMMEst
 
 

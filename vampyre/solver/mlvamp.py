@@ -5,6 +5,7 @@ from __future__ import division
 
 # Import general packages
 import numpy as np
+import time
 
 # Import other subpackages
 import vampyre.common as common
@@ -46,6 +47,7 @@ class MLVamp(Solver):
         self.nit = nit
         self.comp_cost = comp_cost
         self.prt_period = prt_period
+        self.time_iter = 0  # Computation time for last iteration
         
         # Check if all estimators can compute the cost
         nlayers = len(self.est_list)
@@ -56,6 +58,7 @@ class MLVamp(Solver):
                     + " for estimator " + str(i)
                 raise common.VpException(errstr)
             self.comp_cost = self.comp_cost and esti.cost_avail
+            
         
     def init_msg(self):
         """
@@ -263,9 +266,12 @@ class MLVamp(Solver):
                 if (it % self.prt_period == 0) or (it == self.nit-1):                    
                     print("it={0:d} cost={1:12.4e} con={2:12.4e} grad={3:12.4e}".format(\
                         it, self.cost, np.mean(self.con), np.mean(self.grad)))
+            t0 = time.time()
             self.fwd_msg() 
             self.rev_msg()
             self.add_cost()
+            t1 = time.time()
+            self.time_iter = t1-t0
             
             
 

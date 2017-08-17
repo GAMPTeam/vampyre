@@ -148,16 +148,18 @@ class MapInpaint(InpaintMeth):
             
 class VAMPInpaint(InpaintMeth):
     def __init__(self,xtrue,param_fn='param.p', erase_pix0=280,\
-        erase_pix1=560, n_steps=200,map_est=False):
+        erase_pix1=560, n_steps=200,map_est=False,admm=False):
         """
         VAMP-based inpainting
         
         :param n_steps:  number of optimizatoin iterations
-        :param map_est:  Perform MAP or MMSE estimation
+        :param admm: use ADMM solver instead of regular ML-VAMP solver.
+        :param map_est:  Perform MAP estimation (default is MMSE)
         """        
         InpaintMeth.__init__(self,xtrue,param_fn,erase_pix0,erase_pix1)
         self.n_steps = n_steps 
         self.map_est = map_est
+        self.admm = admm
         
     def reconstruct(self):
         """
@@ -237,8 +239,7 @@ class VAMPInpaint(InpaintMeth):
                 rvar_min=rvarmin)
             msg_hdl1 = vp.estim.MsgHdlSimp(shape=zshape1,damp=damp,\
                 damp_var=damp_var,alpha_max=alpha_max,rep_axes=(0,),\
-                rvar_min=rvarmin)
-      
+                rvar_min=rvarmin)                      
             msg_hdl_list.append(msg_hdl0)            
             msg_hdl_list.append(msg_hdl1)
             
