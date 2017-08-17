@@ -1,6 +1,6 @@
 """
 inpaint_test.py:  Tests various inpainting algorithms 
-"""
+self.xhat_mean = (1-1/t)*self.xhat_mean + 1/t*xhati"""
 from __future__ import division
 from __future__ import print_function
 
@@ -46,6 +46,14 @@ parser.set_defaults(vamp_admm=False)
 parser.add_argument('-plot', dest='plot_results', action='store_true',\
     help="Plots results (assuming all methods have been done)")
 parser.set_defaults(plot_results=False)    
+
+parser.add_argument('-lr_sgd',action='store',default=0.001,type=float,\
+    help='step-size for SGLD')
+parser.add_argument('-nsteps_sgld',action='store',default=10000,type=int,\
+    help='total number of steps for SGLD')
+parser.add_argument('-nsteps_burn',action='store',default=5000,type=int,\
+    help='number of steps ignored for averaging in SGLD')
+    
     
 args = parser.parse_args()
 
@@ -57,6 +65,9 @@ run_vamp = args.run_vamp
 vamp_map_est = args.vamp_map_est
 plot_results = args.plot_results
 vamp_admm = args.vamp_admm
+lr_sgd = args.lr_sgd
+nsteps_sgld = args.nsteps_sgld
+nsteps_burn = args.nsteps_burn
 
 
 # Data dimensions
@@ -105,21 +116,22 @@ fn = 'sgld_est.p'
 if run_sgld:
     print("Running SGLD...")
     map_inpaint = MapInpaint(xtrue,erase_pix0=280, erase_pix1=560,\
-        nsteps_init=500, n_steps=10000,lr_adam=0.01,lr_sgd=0.002)
+        nsteps_init=500, n_steps=nsteps_sgld,lr_adam=0.01,lr_sgd=lr_sgd,\
+        nsteps_burn=nsteps_burn)
     map_inpaint.reconstruct()
     xhat_sgld = map_inpaint.xhat
     zhat0_sgld = map_inpaint.zhat0
     zhat0_var_sgld = map_inpaint.zhat0_var
-    zsamp_hist = np.array(map_inpaint.vae_net.hist_dict['zsamp'])
+    #zsamp_hist = np.array(map_inpaint.vae_net.hist_dict['zsamp'])
     with open(fn, "wb") as fp:
-        pickle.dump([xhat_sgld,zhat0_sgld,zhat0_var_sgld,zsamp_hist], fp)
+        pickle.dump([xhat_sgld,zhat0_sgld,zhat0_var_sgld], fp)
 elif plot_results:
     if not os.path.isfile(fn):
         msg = "SGLD has not been run. Use the [-sgld] option".format(fn)
         raise Exception(msg)           
     print("Loading SGLD results...")
     with open(fn,"rb") as fp:
-        xhat_sgld,zhat0_sgld,zhat0_var_sgld,_ = pickle.load(fp)
+        xhat_sgld,zhat0_sgld,zhat0_var_sgld = pickle.load(fp)
 else:
     print("Skipping SGLD.  To run, use the [-sgld] option.")
         

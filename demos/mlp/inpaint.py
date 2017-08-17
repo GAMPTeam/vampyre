@@ -70,7 +70,7 @@ class InpaintMeth:
 class MapInpaint(InpaintMeth):
     def __init__(self,xtrue,param_fn='param.p', erase_pix0=280,\
         erase_pix1=560, n_steps=1000, recon_mode='mmse',\
-        nsteps_init=500, lr_adam=0.01, lr_sgd=0.01,nit_burn_in=2000):
+        nsteps_init=500, lr_adam=0.01, lr_sgd=0.001,nsteps_burn=500):
         """
         Inpainting method based on the VAE-based likelihood.  Two methods are 
         supported.
@@ -80,7 +80,7 @@ class MapInpaint(InpaintMeth):
         If :code:`recon_mode=='mmse'`, then the method finds the MMSE estimate
         using Langevin sampling.
         
-        :param nit_burn_in:  For MMSE estimation, this is the number of initial 
+        :param nsteps_burn_in:  For MMSE estimation, this is the number of initial 
            optimization steps that are ignored for burn in.
         :param n_steps:  number of optimizatoin iterations
         """        
@@ -90,7 +90,7 @@ class MapInpaint(InpaintMeth):
         self.nsteps_init = nsteps_init
         self.lr_adam = lr_adam
         self.lr_sgd = lr_sgd
-        self.nit_burn_in = nit_burn_in
+        self.nsteps_burn = nsteps_burn
     
         
     def reconstruct(self):
@@ -102,7 +102,7 @@ class MapInpaint(InpaintMeth):
             erase_pix0=self.erase_pix0, erase_pix1=self.erase_pix1,\
             mode='recon',param_fn=self.param_fn,\
             recon_mode=self.recon_mode,nsteps_init=self.nsteps_init,\
-            lr_adam=self.lr_adam, lr_sgd=self.lr_sgd)
+            lr_adam=self.lr_adam, lr_sgd=self.lr_sgd, nsteps_burn=self.nsteps_burn)
         vae_net.build_graph()
         
         # Save the network
@@ -116,16 +116,10 @@ class MapInpaint(InpaintMeth):
             For MMSE reconstruction, we compute the values from the averages
             of the samples 
             """
-            zsamp_hist = np.array(vae_net.hist_dict['zsamp'])
-            xhat_hist = np.array(vae_net.hist_dict['xhat'])
-            nit = zsamp_hist.shape[0]
-
-            print("Compute means and variances")            
-            I = range(self.nit_burn_in,nit)            
-            self.zhat0 = np.mean(zsamp_hist[I,:,:],axis=0)
-            self.xhat = np.mean(xhat_hist[I,:,:],axis=0)
-            self.zhat0_var = np.std(zsamp_hist[I,:,:],axis=0)**2
-            self.xhat_var = np.std(xhat_hist[I,:,:],axis=0)**2
+            self.xhat = vae_net.xhat_mean            
+            self.zhat0 = vae_net.zhat0_mean
+            self.xhat_var = vae_net.xhat_sq_mean - vae_net.xhat_mean**2
+            self.zhat0_var = vae_net.zhat0_sq_mean - vae_net.zhat0_mean**2
             
         else: 
             """
