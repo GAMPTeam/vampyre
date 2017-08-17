@@ -102,7 +102,7 @@ class MapInpaint(InpaintMeth):
             erase_pix0=self.erase_pix0, erase_pix1=self.erase_pix1,\
             mode='recon',param_fn=self.param_fn,\
             recon_mode=self.recon_mode,nsteps_init=self.nsteps_init,\
-            lr_adam=self.lr_adam, lr_sgd=self.lr_sgd, nsteps_burn=self.nsteps_burn)
+            lr_adam=self.lr_adam, lr_sgd=self.lr_sgd, nstep_save=self.nsteps_burn)
         vae_net.build_graph()
         
         # Save the network
@@ -116,10 +116,7 @@ class MapInpaint(InpaintMeth):
             For MMSE reconstruction, we compute the values from the averages
             of the samples 
             """
-            self.xhat = vae_net.xhat_mean            
-            self.zhat0 = vae_net.zhat0_mean
-            self.xhat_var = vae_net.xhat_sq_mean - vae_net.xhat_mean**2
-            self.zhat0_var = vae_net.zhat0_sq_mean - vae_net.zhat0_mean**2
+            self.xhat, self.zhat0, self.xhat_var, self.zhat0_var = vae_net.last_avg           
             
         else: 
             """

@@ -42,8 +42,7 @@ class VAE(object):
         nstep_prt=50, nstep_save=5000, save_dir='save', loss_type='logistic',\
         mnist_image_summ = True, mode='train', param_fn = 'param.p',\
         recon_save_dir='recon_save', erase_pix0=28*10,\
-        erase_pix1=28*20, recon_mode='mmse', nsteps_init=400, lr_adam=0.01,lr_sgd=0.01,\
-        nsteps_burn=5000):
+        erase_pix1=28*20, recon_mode='mmse', nsteps_init=400, lr_adam=0.01,lr_sgd=0.01):
         """
         Variational autoencoder for the MNIST data.
         The class can perform one of two tasks:
@@ -107,11 +106,7 @@ class VAE(object):
         self.lr_adam = lr_adam
         self.lr_sgd = lr_sgd
         self.nsteps_init = nsteps_init
-        
-        # Fixed parameters
-        self.nsteps_burn = nsteps_burn
-        self.recon_save_per = 10
-        
+            
         # Check the mode
         if (mode != 'train') and (mode != 'recon'):
             raise Exception("Parameter \'mode\' must be \'train\' or \'recon\' ")
@@ -425,15 +420,10 @@ class VAE(object):
         :param xtrue: MNIST true image
         """                        
         self.create_save_dir()
-        
-        # Create the history dictionary
-        self.hist_dict = dict()
-        for val in ['xhat', 'xhat_logit', 'zsamp']:
-            self.hist_dict[val] = []
-            
-        # Initial value for mean
-        self.xhat_mean = None
-        
+
+        # Counter for averaging        
+        self.step_avg = 0
+                            
         with tf.Session() as sess:
             # Create a log directory name based on the current time.
             # This separates the different runs in tensorboard
@@ -473,41 +463,42 @@ class VAE(object):
                     summary_writer.add_summary(summary_str, step)
 
                 # Update the running averages of the first and second moments
-                if (step >= self.nsteps_burn):                 
-                    xhati, xhat_logiti, zsampi = sess.run(\
-                        [self.xhat, self.xhat_logit,self.z_samp])
-                    if self.xhat_mean is None:
-                        self.xhat_mean = xhati
-                        self.zhat0_mean = zsampi
-                        self.zhat0_sq_mean = zsampi**2
-                        self.xhat_sq_mean = xhati**2
-                    else:
-                        t = 1/(step-self.nsteps_burn+1)
-                        self.xhat_mean += t*(xhati-self.xhat_mean)
-                        self.xhat_sq_mean = t*((xhati**2)-self.xhat_sq_mean)
-                        self.zhat0_mean += t*(zsampi-self.zhat0_mean)
-                        self.zhat0_sq_mean += t*((zsampi**2)-self.zhat0_sq_mean)  
-                                                 
-                # Save the variables in the history dictionary periodically
-                #if (step % self.recon_save_per == 0):
-                    
-                    #self.hist_dict['xhat'].append(np.copy(xhati))
-                    #self.hist_dict['xhat_logit'].append(np.copy(xhat_logiti))
-                    #self.hist_dict['zsamp'].append(np.copy(zsampi))
-                
+                xhati, xhat_logiti, zsampi = sess.run(\
+                    [self.xhat, self.xhat_logit,self.z_samp])
+
+                if (self.step_avg == 0):
+                    self.xhat_mean = xhati
+                    self.zhat0_mean = zsampi
+                    self.zhat0_sq_mean = zsampi**2
+                    self.xhat_sq_mean = xhati**2
+                else:
+                    t = 1/(self.step_avg+1)
+                    self.xhat_mean += t*(xhati-self.xhat_mean)
+                    self.xhat_sq_mean = t*((xhati**2)-self.xhat_sq_mean)
+                    self.zhat0_mean += t*(zsampi-self.zhat0_mean)
+                    self.zhat0_sq_mean += t*((zsampi**2)-self.zhat0_sq_mean)  
+                self.step_avg += 1
+                                                                        
                 # Save the checkpoint files
-                if (step % self.nstep_save == 0) or (step == self.n_steps-1):
+                if ((step % self.nstep_save == 0) and (step > 0)) or (step == self.n_steps-1):
                     save_path = self.recon_save_dir+os.path.sep+"model.ckpt"
                     self.save_path = self.saver.save(sess, save_path,\
                        global_step=step)
                        
-                    # Save xhat values
-                    #fn = "xhat_{0:d}.p".format(step)
-                    #xhat_save_path = self.recon_save_dir+os.path.sep+fn
-                    #pickle.dump(self.hist_dict, open(xhat_save_path, "wb"))
-                    #self.hist_dict['xhat'] = []
-                    #self.hist_dict['xhat_logit'] = []
-                    #self.hist_dict['zsamp'] = []
+                    # Save the current average values
+                    xhat_var = self.xhat_sq_mean - self.xhat_mean**2
+                    zhat0_var = self.zhat0_sq_mean - self.zhat0_mean**2
+                    self.last_avg = [self.xhat_mean,self.zhat0_mean,\
+                            xhat_var, zhat0_var]
+                            
+                    # Reset the counter to reset the averaging
+                    self.step_avg = 0
+                       
+                    # Save the average values in a file
+                    fn = "xhat_{0:d}.p".format(step)
+                    xhat_save_path = self.recon_save_dir+os.path.sep+fn
+                    with open(xhat_save_path, "wb") as fp:
+                        pickle.dump(self.last_avg, fp)
                     
                       
             
