@@ -10,7 +10,6 @@ import vampyre as vp
 
 import numpy as np
 import unittest
-import matplotlib.pyplot as plt
             
 def sparse_em_vamp_inv(nz0=200,nz1=100,ncol=10,snr=30, verbose=False,\
     nit=40, cond_num=100, mse_tol=-17, vamp_meth='vamp', tune=False,\
@@ -167,6 +166,8 @@ def sparse_em_vamp_inv(nz0=200,nz1=100,ncol=10,snr=30, verbose=False,\
             
     
     if plot_res:
+        import matplotlib.pyplot as plt
+        
         plt.figure(figsize=(7,7))
         t = np.arange(len(mse_act))        
         plt.plot(t, mse_act, 's-')        

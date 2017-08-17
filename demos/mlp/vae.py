@@ -19,7 +19,7 @@ import pickle
 import re
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
+
 
 def plt_digit(x):
     """
@@ -27,6 +27,8 @@ def plt_digit(x):
     
     :param:`x` is the digit to plot represented as 784 dim vector
     """
+    import matplotlib.pyplot as plt
+    
     nrow = 28
     ncol = 28
     xsq = x.reshape((nrow,ncol))

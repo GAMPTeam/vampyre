@@ -7,7 +7,6 @@ from __future__ import print_function
 
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
-import matplotlib.pyplot as plt
 import pickle
 import argparse
 import os
@@ -37,16 +36,16 @@ parser.set_defaults(run_sgld=False)
 
 parser.add_argument('-vamp_map', dest='vamp_map_est', action='store_true',\
     help="Uses MAP estimation for VAMP (default is MMSE)")
-parser.set_defaults(vamp_map_est=True)
+parser.set_defaults(vamp_map_est=False)
 
 parser.add_argument('-vamp_admm', dest='vamp_admm', action='store_true',\
     help="Use ADMM solver for VAMP")
-parser.set_defaults(vamp_admm=True)
+parser.set_defaults(vamp_admm=False)
 
 
 parser.add_argument('-plot', dest='plot_results', action='store_true',\
     help="Plots results (assuming all methods have been done)")
-parser.set_defaults(plot_results=True)    
+parser.set_defaults(plot_results=False)    
     
 args = parser.parse_args()
 
@@ -178,6 +177,7 @@ else:
 Plot the results
 """
 if plot_results:
+    import matplotlib.pyplot as plt
                 
     # Plot results
     nplot = 10
