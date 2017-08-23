@@ -71,7 +71,7 @@ class MapInpaint(InpaintMeth):
     def __init__(self,xtrue,param_fn='param.p', erase_pix0=280,\
         erase_pix1=560, n_steps=1000, recon_mode='mmse',\
         nsteps_init=500, lr_adam=0.01, lr_sgd=0.001,nsteps_burn=500,\
-        restore=False):
+        nsteps_save=500,restore=False,avg_only=False):
         """
         Inpainting method based on the VAE-based likelihood.  Two methods are 
         supported.
@@ -83,7 +83,14 @@ class MapInpaint(InpaintMeth):
         
         :param nsteps_burn_in:  For MMSE estimation, this is the number of initial 
            optimization steps that are ignored for burn in.
-        :param n_steps:  number of optimizatoin iterations
+        :param n_steps:  number of optimization iterations
+        :param nsteps_save: period for saving results
+        :param nsteps_burn: number of steps to ignore in averaging for burn in period
+            Only used in MMSE mode
+        :param nsteps_init: number of initial ADAM optimization steps used for MMSE mode
+            These initial steps are used for ensuring that the SGLD starts at the MAP estimate.
+        :param avg_only:  Skips the estimation in SGLD and just averages previous
+            results.  Useful for recomputing averages with different burn ins        
         """        
         InpaintMeth.__init__(self,xtrue,param_fn,erase_pix0,erase_pix1)
         self.n_steps = n_steps
@@ -93,6 +100,8 @@ class MapInpaint(InpaintMeth):
         self.lr_sgd = lr_sgd
         self.nsteps_burn = nsteps_burn
         self.restore = restore
+        self.nsteps_save = nsteps_save
+        self.avg_only = avg_only
     
         
     def reconstruct(self):
@@ -104,21 +113,24 @@ class MapInpaint(InpaintMeth):
             erase_pix0=self.erase_pix0, erase_pix1=self.erase_pix1,\
             mode='recon',param_fn=self.param_fn,\
             recon_mode=self.recon_mode,nsteps_init=self.nsteps_init,\
-            lr_adam=self.lr_adam, lr_sgd=self.lr_sgd, nstep_save=self.nsteps_burn)
+            lr_adam=self.lr_adam, lr_sgd=self.lr_sgd, nstep_save=self.nsteps_save)
         vae_net.build_graph()
         
         # Save the network
         self.vae_net = vae_net
         
         # Run the reconstruction optimization
-        vae_net.reconstruct(self.xtrue,restore=self.restore)
+        if not self.avg_only:
+            vae_net.reconstruct(self.xtrue,restore=self.restore)
         
         if self.recon_mode == 'mmse':
             """
             For MMSE reconstruction, we compute the values from the averages
             of the samples 
             """
-            self.xhat, self.zhat0, self.xhat_var, self.zhat0_var = vae_net.last_avg           
+            #self.xhat, self.zhat0, self.xhat_var, self.zhat0_var = vae_net.last_avg           
+            self.xhat, self.zhat0, self.xhat_var, self.zhat0_var \
+                = vae_net.recon_mean_var(self.nsteps_burn)
             
         else: 
             """
@@ -236,7 +248,7 @@ class VAMPInpaint(InpaintMeth):
             msg_hdl_list.append(msg_hdl1)
             
 
-        msg_hdl_list[1].alpha_max = 0.95
+        msg_hdl_list[1].alpha_max = 0.96
                         
         # Create the MLVamp solver
         solver = vp.solver.MLVamp(est_list,msg_hdl_list,comp_cost=True,\

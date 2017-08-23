@@ -22,7 +22,7 @@ parser.add_argument('-new_dat', dest='new_dat', action='store_true',\
     help="Extracts new set of images to test")
 parser.set_defaults(new_dat=False)
 
-parser.add_argument('-map_adam', dest='run_map', action='store_true',\
+parser.add_argument('-map', dest='run_map', action='store_true',\
     help="Runs MAP inpainting with ADAM optimizer")
 parser.set_defaults(run_map=False)
 
@@ -49,14 +49,22 @@ parser.set_defaults(plot_results=False)
 
 parser.add_argument('-restore', dest='restore', action='store_true',\
     help="Continue from previous run in SGLD or MAP")
-parser.set_defaults(plot_results=False)    
+parser.set_defaults(restore=False)    
 
-parser.add_argument('-lr_sgd',action='store',default=0.001,type=float,\
+parser.add_argument('-sgld_avg_only', dest='sgld_avg_only', action='store_true',\
+    help="Only performs averaging in SGLD, uses old simulations.  "+\
+         "Useful for recomputing averages with different burn ins")
+parser.set_defaults(sgld_avg_only=False)    
+
+
+parser.add_argument('-lr_sgd',action='store',default=0.01,type=float,\
     help='step-size for SGLD')
-parser.add_argument('-nsteps_sgld',action='store',default=10000,type=int,\
+parser.add_argument('-nsteps_sgld',action='store',default=20000,type=int,\
     help='total number of steps for SGLD')
-parser.add_argument('-nsteps_burn',action='store',default=5000,type=int,\
-    help='number of steps ignored for averaging in SGLD')
+parser.add_argument('-nsteps_burn',action='store',default=10000,type=int,\
+    help='number of initial steps ignored for averaging in SGLD')
+parser.add_argument('-nsteps_save',action='store',default=5000,type=int,\
+    help='period for saving data in SGLD')
     
     
 args = parser.parse_args()
@@ -72,7 +80,13 @@ vamp_admm = args.vamp_admm
 lr_sgd = args.lr_sgd
 nsteps_sgld = args.nsteps_sgld
 nsteps_burn = args.nsteps_burn
+nsteps_save = args.nsteps_save
 restore = args.restore
+sgld_avg_only = args.sgld_avg_only
+
+# Check values
+if (nsteps_burn % nsteps_save != 0):
+    raise ValueError("nsteps_burn must be a multiple of nsteps_save.")
 
 # Data dimensions
 npix = 784  # number of pixels per image
@@ -121,8 +135,10 @@ if run_sgld:
     print("Running SGLD...")
     map_inpaint = MapInpaint(xtrue,erase_pix0=280, erase_pix1=560,\
         nsteps_init=500, n_steps=nsteps_sgld,lr_adam=0.01,lr_sgd=lr_sgd,\
-        nsteps_burn=nsteps_burn,restore=restore)
+        nsteps_burn=nsteps_burn,nsteps_save=nsteps_save,restore=restore,\
+        avg_only=sgld_avg_only)
     map_inpaint.reconstruct()
+    
     xhat_sgld = map_inpaint.xhat
     zhat0_sgld = map_inpaint.zhat0
     zhat0_var_sgld = map_inpaint.zhat0_var
@@ -193,6 +209,9 @@ else:
 Plot the results
 """
 if plot_results:
+    
+    print("zhat var (VAMP): {0:12.4e}".format(np.mean(zhat0_var_vamp)))
+    print("zhat var (SGLD): {0:12.4e}".format(np.mean(zhat0_var_sgld)))
     import matplotlib.pyplot as plt
                 
     # Plot results

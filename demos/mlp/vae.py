@@ -318,7 +318,7 @@ class VAE(object):
                 # Compute the prior loss and total loss
                 self.loss_prior = tf.reduce_mean(0.5*tf.reduce_sum(tf.square(self.z_samp), \
                     reduction_indices=1), name="loss_prior")
-                self.loss = tf.add(self.pred_err, self.loss_prior, name="loss")                
+                self.loss = tf.add(self.pred_err, self.loss_prior, name="loss")                                
                 
             else:                  
                 # In training, we use the VAE loss, which is the prediction error 
@@ -344,19 +344,21 @@ class VAE(object):
                 xhat_image = tf.reshape(tf.slice(self.xhat,[0,0],[1,nrow*ncol]), [1,nrow,ncol,1])
                 self.xhat_summ = tf.summary.image("reconstructed", xhat_image)
                     
-        # Add the training ops
+        # Add the dithered gradient descent for MMSE reconstruction
         if (self.mode == 'recon') and (self.recon_mode == 'mmse'):
-            # Gradient descent optimizer.  
-            wvar = 2*self.lr_sgd/self.batch_size
-            self.grad_des_step = \
-                tf.train.GradientDescentOptimizer(self.lr_sgd).minimize(self.loss) 
+            # Compute the gradient
+            self.loss_grad = tf.gradients(self.loss,[self.z_samp])[0]
             
-            # Add dithering for the Langevin dynamics
+            # Dithering 
+            wvar = 2*self.lr_sgd/self.batch_size
             self.zsamp_noise = tf.random_normal(self.z_samp.shape, mean=0.0,\
                 stddev=np.sqrt(wvar),dtype=tf.float32, name="zsamp_noise")            
-            self.zsamp_dither = tf.assign(self.z_samp,\
-                tf.add(self.z_samp, self.zsamp_noise), name="zsamp_dither") 
 
+            # Dithered gradient descent
+            self.grad_des_step = self.z_samp.assign_add(\
+                -self.lr_sgd*self.loss_grad+self.zsamp_noise)        
+
+            
         # Adam optimizer, used for training and MAP estimation
         self.adam_step = tf.train.AdamOptimizer(self.lr_adam).minimize(self.loss)
                                     
@@ -456,7 +458,7 @@ class VAE(object):
                     _, cur_loss, summary_str = sess.run(\
                         [self.grad_des_step, self.loss, self.summary_op], \
                         feed_dict=feed_dict)
-                    sess.run([self.zsamp_dither])                    
+                    #sess.run([self.zsamp_dither])                    
                             
                 if step % self.nstep_prt == 0:      
                     print("Step {0} | Loss: {1}".format(step, cur_loss))
@@ -500,7 +502,65 @@ class VAE(object):
                     with open(xhat_save_path, "wb") as fp:
                         pickle.dump(self.last_avg, fp)
                     
-                      
+    def recon_mean_var(self,step_st):
+        """
+        Computes the mean and variance of the reconstruction for SGLD
+        
+        Reads from the mean and variance files in the reconstruction 
+        directory to compute the mean and variance.  
+        
+        :param step_st:  The step number to start the averaging.  This is
+           used to remove the burn in phase.        
+        """                  
+        nfiles = 0  # number of files found
+        done= False
+        step = step_st + self.nstep_save
+        while not done:
+            
+            # Try files corresponding to both step and step-1 since the last
+            # save files is at step-1.  Exit if file doesn't exist
+            fn = self.recon_save_dir + os.path.sep + "xhat_{0:d}.p".format(step)        
+            if not os.path.exists(fn):
+                fn = self.recon_save_dir + os.path.sep + "xhat_{0:d}.p".format(step-1)   
+                if not os.path.exists(fn):
+                    break
+            
+            # Read file
+            print("Reading file "+fn)
+            with open(fn,"rb") as fp:
+                xhat_meani, zhat0_meani, xhat_vari, zhat0_vari = pickle.load(fp)
+                
+            # Accumulate average values
+            if nfiles == 0:
+                xhat_mean = xhat_meani
+                zhat0_mean = zhat0_meani
+                xhat_var = xhat_vari
+                zhat0_var = zhat0_vari
+                xhat_sq_mean = xhat_meani**2
+                zhat0_sq_mean = zhat0_meani**2                    
+            else:
+                xhat_mean += xhat_meani
+                zhat0_mean += zhat0_meani
+                xhat_var += xhat_vari
+                zhat0_var += zhat0_vari
+                xhat_sq_mean += xhat_meani**2
+                zhat0_sq_mean += zhat0_meani**2                    
+            nfiles += 1
+            step += self.nstep_save
+        if (nfiles == 0):
+            raise Exception("File "+fn+"not found")
+        
+        print("Averaging from steps {0:d} to {1:d}".format(step_st,step-self.nstep_save))
+        xhat_mean = xhat_mean/nfiles
+        xhat_sq_mean = xhat_sq_mean/nfiles
+        xhat_var = xhat_var/nfiles + xhat_sq_mean - xhat_mean**2
+
+        zhat0_mean = zhat0_mean/nfiles
+        zhat0_sq_mean = zhat0_sq_mean/nfiles
+        zhat0_var = zhat0_var/nfiles + zhat0_sq_mean - zhat0_mean**2
+        return xhat_mean, xhat_var, zhat0_mean, zhat0_var
+
+        
             
     def train(self, mnist, restore=False):
         """
@@ -538,7 +598,7 @@ class VAE(object):
                 batch = mnist.train.next_batch(self.batch_size)
                 feed_dict = {self.x: batch[0]}
                 _, cur_loss, summary_str = sess.run(\
-                    [self.train_step, self.loss, self.summary_op], \
+                    [self.adam_step, self.loss, self.summary_op], \
                     feed_dict=feed_dict)
                             
                 if step % self.nstep_prt == 0:      
