@@ -191,7 +191,12 @@ class LinEstim(Estim):
         qvar_mean = np.mean(qvar, axis=self.zrep_axes)
         
         zhat = self.A.Vsvd(q - qbar) + r
-        zhatvar = ns/nz*qvar_mean + (1-ns/nz)*rvar     
+        zhatvar = ns/nz*qvar_mean + (1-ns/nz)*rvar  
+        
+        # Update the variance estimate if tuning is enabled
+        if self.tune_wvar:
+            yerr = np.abs(self.y - self.A.Usvd(s1*q))**2
+            self.wvar = np.mean(yerr, self.wrep_axes) + np.mean(qvar*(np.abs(s1)**2),self.wrep_axes)
         
         # Exit if cost does not need to be computed
         if not return_cost:
@@ -202,9 +207,7 @@ class LinEstim(Estim):
             err = np.abs(self.p-s1*q)**2
             cost = self.ypnorm + np.sum(err/wvar1)
         else:
-            cost = 0
-            
-                      
+            cost = 0                                 
         
         # Add the MAP input cost
         err = np.abs(q-qbar)**2
@@ -226,12 +229,7 @@ class LinEstim(Estim):
         # Scale for real case
         if not self.is_complex:
             cost = 0.5*cost            
-            
-        # Update the variance estimate if tuning is enabled
-        if self.tune_wvar:
-            yerr = np.abs(self.y - self.A.Usvd(s1*q))**2
-            self.wvar = np.mean(yerr, self.wrep_axes) + np.mean(qvar*(np.abs(s1)**2),self.wrep_axes)
-                
+                        
         return zhat, zhatvar, cost
                           
         
