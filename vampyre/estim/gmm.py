@@ -5,14 +5,14 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-from vampyre.estim.base import Estim
+from vampyre.estim.base import BaseEst
 from vampyre.estim.gaussian import GaussEst
 from vampyre.estim.mixture import MixEst
 from vampyre.common.utils import VpException, repeat_const
 
 from sklearn import mixture
 
-class GMMEst(Estim):
+class GMMEst(BaseEst):
     """ Gaussian mixture estimator class with auto-tuning.
     
     There are two initialization methods.
@@ -35,21 +35,22 @@ class GMMEst(Estim):
     :note:  Currently the class only supports scalar (real or complex)
     Gaussian mixtures
     """    
-    def __init__(self, shape, probc, meanc, varc,\
+    def __init__(self, shape, probc, meanc, varc,name=None,\
         var_axes=(0,),mean_fix=None,var_fix=None,\
         is_complex=False,map_est=False,zvarmin=1e-3, tune_gmm=False):
             
         # Save properties            
-        Estim.__init__(self)        
         self.map_est = map_est
         self.is_complex = is_complex
-        self.var_axes = var_axes
-        self.shape = shape
-        self.cost_avail = True
         self.zvarmin = zvarmin
         self.tune_gmm = tune_gmm   
         self.mean_fix = mean_fix
         self.var_fix = var_fix
+     
+        dtype = meanc.dtype
+        BaseEst.__init__(self,shape=shape,var_axes=var_axes,dtype=dtype,\
+            name=name, type_name='GMM', nvars=1, cost_avail=True)
+
         
         # If the GMM parameters are given, set them now
         self.mix = None
@@ -95,7 +96,8 @@ class GMMEst(Estim):
                     esti.zvar = np.copy(varc[i])
                     
                                  
-    def est_init(self, return_cost=False):
+    def est_init(self, return_cost=False,ind_out=None,\
+        avg_var_cost=True):
         """
         Initial estimator.
         
@@ -106,13 +108,14 @@ class GMMEst(Estim):
             to be returned
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
-        """       
+        """           
        
         # otherwise, use the mixture estimator
-        return self.mix.est_init(return_cost)
+        return self.mix.est_init(return_cost,ind_out,avg_var_cost)
                     
                     
-    def est(self,r,rvar,return_cost=False):
+    def est(self,r,rvar,return_cost=False,ind_out=None,\
+        avg_var_cost=True):
         """
         Estimation function
         
@@ -129,9 +132,9 @@ class GMMEst(Estim):
              
         # Run the estimator with the current parameter settings              
         if return_cost:
-            zhat,zhatvar,cost = self.mix.est(r,rvar,return_cost)
+            zhat,zhatvar,cost = self.mix.est(r,rvar,return_cost,ind_out,avg_var_cost)
         else:
-            zhat,zhatvar = self.mix.est(r,rvar,return_cost)
+            zhat,zhatvar = self.mix.est(r,rvar,return_cost,ind_out,avg_var_cost)
             
         # Update the parameters if tuning is enabled
         if (self.tune_gmm):

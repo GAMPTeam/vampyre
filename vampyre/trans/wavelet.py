@@ -10,10 +10,10 @@ import numpy as np
 import vampyre.common as common
 
 # Import individual classes from same modules in the same package
-from vampyre.trans.base import LinTrans
+from vampyre.trans.base import BaseLinTrans
 
 
-class Wavelet2DLT(LinTrans):
+class Wavelet2DLT(BaseLinTrans):
     """
     Linear transform class based on a 2D wavelet
     
@@ -24,16 +24,19 @@ class Wavelet2DLT(LinTrans):
     :param fwd_mode:  `recon` indicates that `dot()` operation is the 
        reconstruction and `dotH()` is the analysis.  `analysis` is the reverse.
     """    
-    def __init__(self,nrow=256,ncol=256,wavelet='db4',level=3,fwd_mode='recon'):
-        
-        # Initialize the base class
-        LinTrans.__init__(self)
-    
+    def __init__(self,nrow=256,ncol=256,wavelet='db4',level=3,fwd_mode='recon',\
+        dtype=np.float64,name=None):
+            
         # Save parameters
         self.wavelet = wavelet
         self.level = level
-        self.shape0 = (nrow,ncol)
-        self.shape1 = (nrow,ncol)
+        shape0 = (nrow,ncol)
+        shape1 = (nrow,ncol)
+        dtype0 = dtype
+        dtype1 = dtype
+        BaseLinTrans.__init__(self, shape0, shape1, dtype0, dtype1,\
+           svd_avail=True,name=name)
+                
         
         # Set the mode to periodic to make the wavelet orthogonal
         self.mode = 'periodization'

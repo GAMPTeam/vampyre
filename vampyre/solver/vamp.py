@@ -8,9 +8,9 @@ import numpy as np
 import time
 
 # Import other subpackages
-#import vampyre.estim as estim
+import vampyre.estim as estim
 #import vampyre.trans as trans
-#import vampyre.common as common
+import vampyre.common as common
 
 # Import methods and classes from the same vampyre sub-package
 from vampyre.solver.base import Solver
@@ -34,10 +34,10 @@ class Vamp(Solver):
     :param nit:  Maximum number of iterations          
     :param comp_cost:  Compute cost
     :param prt_period:  Period for printing progress (value of 0 indicates
-       no printing)
+        no printing)
     """
     def __init__(self, est1, est2, msg_hdl, hist_list=[], nit=10,\
-        comp_cost=False,prt_period=0):
+        comp_cost=False,prt_period=0, is_complex=False, map_est=False):
         Solver.__init__(self,hist_list)
         self.est1 = est1
         self.est2 = est2
@@ -45,6 +45,42 @@ class Vamp(Solver):
         self.nit = nit
         self.comp_cost = comp_cost
         self.prt_period = prt_period
+        
+        # Check if dimensions match
+        if self.est1.shape != self.est2.shape:
+            err_str = '%s shape %s does not match %s shape %s' %\
+                (self.est1.name, str(self.est1.shape),\
+                 self.est2.name, str(self.est2.shape))                
+            raise common.VpException(err_str)
+        if self.est1.shape != self.msg_hdl.shape:
+            err_str = '%s shape %s does not match msg_hdl shape %s' %\
+                (self.est1.name, str(self.est1.shape),\
+                 str(self.msg_hdl.shape))                
+            raise common.VpException(err_str)
+            
+        if self.est1.var_axes != self.est2.var_axes:
+            err_str = '%s var_axes %s does not match %s var_axes %s' %\
+                (self.est1.name, str(self.est1.var_axes),\
+                 self.est2.name, str(self.est2.var_axes))
+            raise common.VpException(err_str)
+        if self.est1.var_axes != self.msg_hdl.var_axes:
+            err_str = '%s var_axes %s does not match msg_hdl var_axes %s' %\
+                (self.est1.name, str(self.est1.var_axes),\
+                 str(self.msg_hdl.var_axes))                
+            
+        # Set default message handler
+        if msg_hdl is None:
+            self.msg_hdl = estim.MsgHdlSimp()
+        
+    def summary(self):
+        """
+        Prints a summary of the model
+        """
+        print('Variable:  shape: %s, var_axes: %s'\
+            % (str(self.msg_hdl.shape),str(self.msg_hdl.var_axes)))
+        print('est0: %s (%s)' % (str(self.est1.name),str(self.est1.type_name)))
+        print('est1: %s (%s)' % (str(self.est2.name),str(self.est2.type_name)))
+        
                         
     def solve(self):
         """

@@ -5,11 +5,11 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-from vampyre.common.utils import repeat_axes, repeat_sum
-from vampyre.common.utils import TestException, VpException
-from vampyre.estim.base import Estim
+from vampyre.common.utils import get_var_shape, repeat_axes, repeat_sum
+from vampyre.common.utils import VpException
+from vampyre.estim.base import BaseEst
 
-class GaussEst(Estim):
+class GaussEst(BaseEst):
     """ Gaussian estimator class
     
     Estimator for a Gaussian penalty 
@@ -34,40 +34,41 @@ class GaussEst(Estim):
     :param Boolean tune_rvar:  indicates if the proximal variance
         :code:`rvar` is estimated.
     """    
-    def __init__(self, zmean, zvar, shape,\
+    def __init__(self, zmean, zvar, shape,name=None,\
                  var_axes = (0,), zmean_axes='all',\
                  is_complex=False, map_est=False, tune_zvar=False,\
                  tune_rvar=False):
-        Estim.__init__(self)
+                
+        if np.isscalar(shape):
+            shape = (shape,)
+        if is_complex:
+            dtype = np.double
+        else:
+            dtype = np.complex
+             
+        BaseEst.__init__(self,shape=shape,dtype=dtype,name=name,
+                         var_axes=var_axes,type_name='GaussEst', cost_avail=True)
         self.zmean = zmean
         self.zvar = zvar
         self.cost_avail = True  
         self.is_complex = is_complex  
         self.map_est = map_est         
-        self.shape = shape if (type(shape) is not int) else (shape,)
-        self.var_axes = var_axes
         self.zmean_axes = zmean_axes
         self.tune_zvar = tune_zvar
         self.tune_rvar = tune_rvar
         
         ndim = len(self.shape)
-        if self.var_axes == 'all':
-            self.var_axes = tuple(range(ndim))        
         if self.zmean_axes == 'all':
             self.zmean_axes = tuple(range(ndim))
             
         # If zvar is a scalar, then repeat it to the required shape,
         # which are all the dimensions not being averaged over
         if np.isscalar(self.zvar):
-            ndim = len(self.shape)
-            axes_spec = [i for i in range(ndim) if i not in self.var_axes]
-            if axes_spec != []:
-                shape1 = tuple(np.array(self.shape)[axes_spec])
-                self.zvar = np.tile(self.zvar, shape1)
-        
+            var_shape = get_var_shape(self.shape, self.var_axes)
+            self.zvar = np.tile(self.zvar, var_shape) 
                  
         
-    def est_init(self, return_cost=False, avg_var_cost=True):
+    def est_init(self, return_cost=False, ind_out=None, avg_var_cost=True):
         """
         Initial estimator.
         
@@ -82,6 +83,11 @@ class GaussEst(Estim):
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
         """        
+        
+        # Check if ind_out is valid
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+            
         zmean = repeat_axes(self.zmean, self.shape, self.zmean_axes)
         zvar  = self.zvar
         if not avg_var_cost:
@@ -102,7 +108,7 @@ class GaussEst(Estim):
             cost = 0.5*cost
         return zmean, zvar, cost
                     
-    def est(self,r,rvar,return_cost=False,avg_var_cost=True):
+    def est(self,r,rvar,return_cost=False,ind_out=None,avg_var_cost=True):
         """
         Estimation function
         
@@ -120,6 +126,10 @@ class GaussEst(Estim):
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior
             mean, variance and optional cost.
         """
+        
+        # Check if ind_out is valid
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
         
         # Infinite variance case
         if np.any(rvar==np.Inf):

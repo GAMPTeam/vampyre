@@ -64,11 +64,11 @@ def vamp_gauss_test(nz=100,ny=200,ns=10, snr=30, map_est=False, verbose=False,\
     y = y0 + np.random.normal(0,np.sqrt(wvar),yshape)
     
     # Construct input estimator
-    est_in = vp.estim.GaussEst(zmean0,zvar0,zshape,map_est=map_est)
+    est_in = vp.estim.GaussEst(zmean0,zvar0,zshape,map_est=map_est, name='Prior')
            
     # Create output estimator
     Aop = vp.trans.MatrixLT(A,zshape)
-    est_out = vp.estim.LinEstim(Aop,y,wvar,map_est=map_est)
+    est_out = vp.estim.LinEst(Aop,y,wvar,map_est=map_est, name='Posterior')
     
     # Create the variance handler
     msg_hdl = vp.estim.MsgHdlSimp(map_est=map_est, is_complex=is_complex, \
@@ -216,7 +216,7 @@ def vamp_gmm_test(nz=100,ny=200,ns=10, snr=30, verbose=False, mse_tol=-17):
 
     # Create output estimator
     Aop = vp.trans.MatrixLT(A,zshape)
-    est_out = vp.estim.LinEstim(Aop,y,wvar,map_est=map_est)
+    est_out = vp.estim.LinEst(Aop,y,wvar,map_est=map_est)
 
     # Create the variance handler
     msg_hdl = vp.estim.MsgHdlSimp(map_est=map_est, is_complex=is_complex,\
@@ -299,7 +299,7 @@ def vamp_bg_test(nz=1000,ny=500,ns=1, snr=30, verbose=False, pred_tol=3.0):
 
     # Create output estimator
     Aop = vp.trans.MatrixLT(A,zshape)
-    est_out = vp.estim.LinEstim(Aop,y,wvar,map_est=map_est)
+    est_out = vp.estim.LinEst(Aop,y,wvar,map_est=map_est)
 
     # Create the variance handler
     msg_hdl = vp.estim.MsgHdlSimp(map_est=map_est, is_complex=is_complex,\

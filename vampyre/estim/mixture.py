@@ -13,11 +13,10 @@ import copy
 import vampyre.common as common
 
 # Import methods and classes from the same sub-package
-from vampyre.estim.base import Estim
-from vampyre.estim.gaussian import GaussEst
+from vampyre.estim.base import BaseEst
 
 
-class MixEst(Estim):
+class MixEst(BaseEst):
     """ Mixture estimator class
     
     Given a list of estimators where :code:`est_list[i]`, 
@@ -40,22 +39,30 @@ class MixEst(Estim):
     :param est_list:  list of estimators 
     :param w: weight for the components
     """    
-    def __init__(self, est_list, w):
-        Estim.__init__(self)
+    def __init__(self, est_list, w, name=None):
+        
         self.est_list = est_list
         self.w = w
-        self.shape = est_list[0].shape
-        self.var_axes = est_list[0].var_axes
+        
+        shape = est_list[0].shape
+        var_axes = est_list[0].var_axes
+        dtype = est_list[0].dtype
         
         # Check that all estimators have cost available
         for est in est_list:
+            if est.shape != shape:
+                raise common.VpException('Estimators must have the same shape')
+            if est.var_axes != var_axes:
+                raise common.VpException('Estimators must have the same var_axes')                
             if not est.cost_avail:
                 raise common.VpException(\
                     "Estimators in a mixture distribution"+\
                     "must have cost_avail==True")
-        self.cost_avail = True
+        BaseEst.__init__(self,shape=shape,var_axes=var_axes,dtype=dtype,\
+            name=name, type_name='Mixture', nvars=1, cost_avail=True)
                                  
-    def est_init(self, return_cost=False):
+    def est_init(self, return_cost=False, ind_out=None,\
+        avg_var_cost=True):
         """
         Initial estimator.
         
@@ -67,7 +74,12 @@ class MixEst(Estim):
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
         """       
-        
+        # Check parameters
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+        if not avg_var_cost:
+            raise ValueError("disabling variance averaging not supported for MixEst")
+
         # Get the mean and variance of each component
         zmean_list = []
         zvar_list = []
@@ -81,7 +93,8 @@ class MixEst(Estim):
         return self._comp_est(zmean_list,zvar_list,cost_list,return_cost)
     
                     
-    def est(self,r,rvar,return_cost=False):
+    def est(self,r,rvar,return_cost=False,ind_out=None,\
+        avg_var_cost=True):
         """
         Estimation function
         
@@ -95,7 +108,14 @@ class MixEst(Estim):
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior 
         mean, variance and optional cost.
         """
-         # Get the mean and variance of each component
+        
+        # Check parameters
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+        if not avg_var_cost:
+            raise ValueError("disabling variance averaging not supported for MixEst")
+
+        # Get the mean and variance of each component
         zmean_list = []
         zvar_list = []
         cost_list = []
@@ -158,74 +178,4 @@ class MixEst(Estim):
             return zmean, zvar, cost
         else:
             return zmean, zvar
-            
-def mix_test(zshape=(1000,10), verbose=False, tol=0.1, raise_exception=True):
-    """
-    Unit test for the :class:`MixEst` class
-    
-    The test works by creating synthetic Gaussian mixture
-    variables :math:`z`, and measurements 
-    
-    :math:`r = z + w,  w \sim {\mathcal N}(0,\\tau_r)`
-    
-    Then, the estimateion methods are called to see if 
-    the measured error variance matches the expected value.
-            
-    :param zshape: shape of :math:`z`
-    :param Boolean verbose:  prints results.  
-    :param tol:  error tolerance to consider test as passed
-    :param Boolean raise_exception:  Raise an error if test fails. 
-       The exception can be caught by the test_suite dispatcher.
-    """    
-
-    # Generate random components    
-    ncomp=3
-    nz = np.prod(zshape)     
-    zvar = np.power(10,np.random.uniform(-2,1,ncomp))
-    rvar = np.power(10,np.random.uniform(-2,1,ncomp))[0]
-    zmean = np.random.normal(0,1,ncomp)
-    
-    # Generate random probabilities
-    p = np.random.rand(ncomp)
-    p = p / np.sum(p)
-    
-    # Create a set of estimators
-    est_list = []
-    zcomp = np.zeros((nz,ncomp))
-    for i in range(ncomp):
-        est = GaussEst(zmean[i], zvar[i], zshape, var_axes='all')
-        est_list.append(est)
-        
-        zcomp[:,i] = np.random.normal(zmean[i],np.sqrt(zvar[i]),nz)
-        
-    # Compute the component selections
-    u = np.random.choice(range(ncomp),p=p,size=nz)
-    z = np.zeros(nz)
-    for i in range(nz):
-        z[i] = zcomp[i,u[i]]
-    z = np.reshape(z,zshape)
-    
-    # Add noise
-    r = z + np.random.normal(0,np.sqrt(rvar),zshape)    
-    
-    # Construct the estimator
-    est = MixEst(est_list, w=p)     
-    
-    # Inital estimate
-    zmean1, zvar1 = est.est_init()
-    zerr1 = np.mean(np.abs(z-zmean1)**2)
-    if verbose:
-        print("Initial:    True: {0:f} Est:{1:f}".format(zerr1,zvar1))
-    if (np.abs(zerr1-zvar1) > tol*np.abs(zerr1)) and raise_exception:
-        raise common.TestException("Initial estimate GMM error "+ 
-           " does not match predicted value")
-    
-    # Posterior estimate
-    zhat, zhatvar, cost = est.est(r,rvar,return_cost=True)
-    zerr = np.mean(np.abs(z-zhat)**2)
-    if verbose:
-        print("Posterior:  True: {0:f} Est:{1:f}".format(zerr,zhatvar))
-    if (np.abs(zerr-zhatvar) > tol*np.abs(zerr)) and raise_exception:
-        raise common.TestException("Posterior estimate GMM error "+ 
-           " does not match predicted value")
 

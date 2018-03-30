@@ -4,11 +4,11 @@ matrix.py:  Linear transforms based on a matrix
 from __future__ import division
 
 import numpy as np
-from vampyre.trans.base import LinTrans
+from vampyre.trans.base import BaseLinTrans
 from vampyre.common.utils import repeat_axes
-from vampyre.common.utils import TestException
+from vampyre.common.utils import VpException
 
-class MatrixLT(LinTrans):
+class MatrixLT(BaseLinTrans):
     """
     Linear transform defined by a matrix
     
@@ -23,11 +23,12 @@ class MatrixLT(LinTrans):
     :param shape0:  input shape (The output shape is computed from this)
     """
     def __init__(self, A, shape0):
-        LinTrans.__init__(self)
+        
+        # Get dimensions        
         self.A = A
         if np.isscalar(shape0):
             shape0 = (shape0,)
-        self.shape0 = shape0
+            
         
         # Compute the output shape
         # Note that A.dot(x) operates on the second to last axis of x
@@ -38,11 +39,25 @@ class MatrixLT(LinTrans):
         else:
             self.aaxis = len(shape0)-2
         shape1[self.aaxis] = Ashape[0]
-        self.shape1 = tuple(shape1)
+        shape1 = tuple(shape1)
         
+        # Check that input shape matches
+        if shape0[self.aaxis] != Ashape[-1]:
+            raise VpException("Input shape %s does not match matrix shape %s"\
+                % (str(shape0), str(Ashape)))
+        
+        # Get data types
+        dtype0 = A.dtype
+        dtype1 = A.dtype
+
+        # Superclass constructor
+        BaseLinTrans.__init__(self, shape0, shape1, dtype0, dtype1,\
+                              svd_avail=True,name='MatrixLT')
+
         # Set SVD terms to not computed
         self.svd_computed = False
-        self.svd_avail = True
+        
+                              
         
     def dot(self,z0):
         """
@@ -156,41 +171,14 @@ class MatrixLT(LinTrans):
         srep = repeat_axes(np.conj(s1),self.sshape,self.srep_axes,rep=False)
         q0 = srep*q1
         return q0
-                    
         
-def matrix_test(Ashape=(50,100),shape0=(100,10), tol=1e-8, verbose=False,\
-                raise_exception=True):
-    """
-    Unit test for the :class:`MatrixLT` class.
-    
-    :param Ashape:  Shape of matrix
-    :param shape0:  Shape of input
-    :param Boolean verbose:  Print results of test.
-    :param tol:  Tolerance for passing test
-    :param Boolean raise_exception:  Raises an error on test failure.  This 
-        can be caught in the unit test dispatcher.
-    """
-    # Generate random matrix, input and output
-    A = np.random.uniform(0,1,Ashape)
-    z0 = np.random.uniform(0,1,shape0)
-    z1 = A.dot(z0)
-
-    # Create corresponding matrix operator
-    Aop = MatrixLT(A,shape0)
-
-    # Perform the multiplication via SVD
-    s = Aop.get_svd_diag()[0]     
-    q0 = Aop.VsvdH(z0)
-    q1 = Aop.svd_dot(s,q0)
-    z1est = Aop.Usvd(q1)
-    
-    # Test fails if SVD method does not match direct method
-    err = np.linalg.norm(z1-z1est)
-    if verbose:
-        print("Error: {0:12.4e}".format(err))        
-    if (err > tol) and raise_exception:
-        raise TestException("SVD method for performing multiplication"\
-            +"does not match direct multiplication.  "\
-            +"err={0:12.4e}".format(err))
+    #def __str__(self):
+    #    string = str(self.name) + '\n'\
+    #              + 'Input: ' + str(self.shape0) + ',' + str(self.dtype0)
+    #    return string
+         
+        
+        
+                    
         
     

@@ -125,6 +125,19 @@ def repeat_test(verbose=False, tol=1e-8, raise_exception=True):
                 
     if (d > tol) and raise_exception:
         raise TestException("Sum along repeated matrix is not conistent")
+
+def get_var_shape(shape, var_axes):
+    """
+    Computes the shape of the variance based on the shape of the data
+    and the axes being averaged
+    """    
+    ndim = len(shape)
+    axes_spec = [i for i in range(ndim) if i not in var_axes]
+    if axes_spec != []:
+        var_shape = tuple(np.array(shape)[axes_spec])
+    else:
+        var_shape = (1,)
+    return var_shape
     
     
                 

@@ -11,19 +11,19 @@ from scipy.integrate import quad
 import vampyre.common as common
 
 # Import individual classes and methods from the current subpackage
-from vampyre.estim.base import Estim
+from vampyre.estim.base import BaseEst
 
-class HardThreshEst(Estim):
+class BinaryQuantEst(BaseEst):
     """
-    Esitmator for a hard threshold
+    Esitmator for a binary hard threhsold function output
     
     This esitmator corresponds to a binary measurement :math:`y=0,1` where
     :math:`y=1` if :math:`z > t` and :math:`y=0` else.  The value :math:`t`
     is a threshold.  
     
     To improve the numerical stability of the estimator for outliers, the
-    estimator has a parameter :math:`\\lambda` such that :math:`y` changes
-    sign with probality :math:`\\lambda`.  This should be set to a small, 
+    estimator has a parameter :code:`perr` such that :math:`y` changes
+    sign with probality :code:`perr`.  This should be set to a small, 
     but positive number.
     
     :param y:  Binary output 
@@ -34,25 +34,20 @@ class HardThreshEst(Estim):
     :param perr:  error probability (default = 1e-6)
     :param var_init:  initial variance.  This should be large (default=100)
     """    
-    def __init__(self,y,shape,zrep_axes=(0,),thresh=0,perr=1e-6,\
-                 var_init=np.Inf):
+    def __init__(self,y,shape,var_axes=(0,),thresh=0,perr=1e-6,\
+                 name=None,var_init=np.Inf,dtype=np.float64):
         
-        Estim.__init__(self)
+        BaseEst.__init__(self, shape=shape, var_axes=var_axes, dtype=dtype,\
+            name=name,type_name='BinaryQuantEst', nvars=1, cost_avail=True)
         self.y = y
         self.shape = shape
         self.thresh = thresh
         self.perr = perr
         self.cost_avail = True
         self.var_init = var_init
-       
-        # Set the repetition axes
-        ndim = len(self.shape)
-        if zrep_axes == 'all':
-            zrep_axes = tuple(range(ndim))
-        self.zrep_axes = zrep_axes        
-                                  
+                                        
         
-    def est_init(self, return_cost=False):
+    def est_init(self, return_cost=False, ind_out=None, avg_var_cost=True):
         """
         Initial estimator.
         
@@ -67,22 +62,22 @@ class HardThreshEst(Estim):
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
         """        
+        # Check parameters
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+        if not avg_var_cost:
+            raise ValueError("disabling variance averaging not supported for HardThreshEst")
+
         zmean = np.zeros(self.shape)
-        ndim = len(self.shape)
-        zvar_ind = [i for i in range(ndim) if i not in self.zrep_axes]
-        if zvar_ind == []:
-            zvar = self.var_init
-        else:
-            zvar_shape = np.array(self.shape)[zvar_ind]
-            zvar_shape = tuple(zvar_shape)        
-            zvar = self.var_init*np.ones(zvar_shape)
+        zvar_shape = common.utils.get_var_shape(self.shape, self.var_axes)
+        zvar = np.tile(self.var_init,zvar_shape)
         cost = 0
         if return_cost:
             return zmean, zvar, cost
         else:
             return zmean, zvar
         
-    def est(self,r,rvar,return_cost=False):
+    def est(self,r,rvar,return_cost=False, ind_out=None, avg_var_cost=True):
         """
         Estimation function
         
@@ -96,10 +91,16 @@ class HardThreshEst(Estim):
         
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior
             mean, variance and optional cost.
-        """        
+        """    
+        # Check parameters
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+        if not avg_var_cost:
+            raise ValueError("disabling variance averaging not supported for HardThreshEst")
+
         
         # Repeat the variance and reshape r and rvar to 1D vectors
-        rvar1 = common.repeat_axes(rvar, self.shape, self.zrep_axes)
+        rvar1 = common.repeat_axes(rvar, self.shape, self.var_axes)
         r1 = r.ravel()
         rvar1 = rvar1.ravel()
         y1 = self.y.ravel()
@@ -129,60 +130,13 @@ class HardThreshEst(Estim):
         # Reshape and average values
         zhat = np.reshape(zhat,self.shape)
         zhatvar = np.reshape(zhatvar,self.shape)
-        zhatvar = np.mean(zhatvar, axis=self.zrep_axes)
+        zhatvar = np.mean(zhatvar, axis=self.var_axes)
         
         if return_cost:
             return zhat, zhatvar, cost
         else:
             return zhat, zhatvar
                 
-                      
-def hard_thresh_test(zshape=(1000,10), verbose=False, rvar=None, tol=0.1):
-    """
-    Unit test for the :class:`HardThreshEst` class
-    
-    The test works by creating synthetic distribution, creating an i.i.d.
-    matrix :math:`z` with Gaussian components and then taking quantized
-    values :math:`y = (z > t)` where `t` is a random threshold    
-    Then, the estimation methods are called to see if 
-    the measured error variance matches the expected value.
-            
-    :param zshape: shape of :math:`z`
-    :param Boolean verbose:  prints results.  
-    :parma rvar:  Gaussian variance.  :code:`None` will generate a random
-       value
-    :param tol:  Tolerance for test test to pass
-    """    
-    
-    # Generate random parameters
-    if rvar == None:
-        rvar = 10**(np.random.uniform(-1,1,1))[0]
-    
-    # Generate data
-    r = np.random.normal(0,1,zshape)
-    z = r + np.random.normal(0,np.sqrt(rvar),zshape)
-    thresh = 0 #np.random.uniform(-1,1,1)[0]   
-    y = (z > thresh)
-    
-    # Create estimator
-    est = HardThreshEst(y,shape=zshape,thresh=thresh,zrep_axes='all')
-    
-    # Run the initial estimate.  In this case, we just check that the 
-    # dimensions match
-    zmean, zvar, cost = est.est_init(return_cost=True)
-    if not (zmean.shape == zshape) or not np.isscalar(zvar):
-        raise common.TestException("Initial shapes are not correct")
-                    
-    # Get posterior estimate
-    zhat, zhatvar, cost = est.est(r,rvar,return_cost=True)
-    
-    # Measure error
-    zerr = np.mean(np.abs(zhat-z)**2)
-    if verbose:
-        print("err: true: {0:12.4e} est: {1:12.4e}".format(zerr,zhatvar) )
-    if (np.abs(zerr-zhatvar) > tol*np.abs(zerr)):
-        raise common.TestException("Posterior estimate for error "+ 
-           "does not match predicted value")
 
 
 def gauss_integral(a,b,mu,var):

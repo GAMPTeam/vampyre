@@ -9,8 +9,6 @@ import time
 
 # Import other subpackages
 import vampyre.common as common
-import vampyre.estim as estim
-import vampyre.trans as trans
 
 # Import methods and classes from the same vampyre sub-package
 from vampyre.solver.base import Solver
@@ -49,8 +47,54 @@ class MLVamp(Solver):
         self.prt_period = prt_period
         self.time_iter = 0  # Computation time for last iteration
         
-        # Check if all estimators can compute the cost
+        # Check dimensions
         nlayers = len(self.est_list)
+        if self.est_list[0].nvars != 1:
+            raise ValueError('First estimator must take 1 variable')
+        if self.est_list[-1].nvars != 1:
+            raise ValueError('Last estimator must take 1 variable')
+        for i in range(0,nlayers-1):
+            msg_hdl_shape = self.msg_hdl_list[i].shape
+            msg_hdl_var_axes = self.msg_hdl_list[i].var_axes
+            if i > 0:
+                if (self.est_list[i].nvars != 2):
+                    errstr = 'Estimator %s must take 2 variables'\
+                        % self.est_list[i].name
+                    raise ValueError(errstr)
+
+            if i==0:
+                shape0 = self.est_list[i].shape
+                var_axes0 = self.est_list[i].var_axes
+            else:
+                shape0 = self.est_list[i].shape[1]
+                var_axes0 = self.est_list[i].var_axes[1]
+            if i==nlayers-2:
+                shape1 = self.est_list[i+1].shape
+                var_axes1 = self.est_list[i+1].var_axes
+            else:
+                shape1 = self.est_list[i+1].shape[0]
+                var_axes1 = self.est_list[i+1].var_axes[0]
+            
+            if shape0 != shape1:
+                errstr = 'Est %s shape %s does not match est %s shape %s'\
+                    % (est_list[i].name, str(shape0), est_list[i+1].name, str(shape1))
+                raise ValueError(errstr)
+            if shape0 != msg_hdl_shape:
+                errstr = 'Est %s shape %s does not match msg_hdl shape %s'\
+                    % (est_list[i].name, str(shape0), str(msg_hdl_shape))
+                raise ValueError(errstr)
+                
+            if var_axes0 != var_axes1:
+                errstr = 'Est %s var_axes %s does not match est %s var_axes %s'\
+                    % (est_list[i].name, str(var_axes0), est_list[i+1].name, str(var_axes1))            
+            if var_axes0 != msg_hdl_var_axes:
+                errstr = 'Est %s var_axes %s does not match msg_hdl var_axes %s'\
+                    % (est_list[i].name, str(var_axes0), str(msg_hdl_var_axes))
+                raise ValueError(errstr)
+            
+        
+        
+        # Check if all estimators can compute the cost
         for i in range(nlayers):
             esti = self.est_list[i]
             if self.comp_cost and not esti.cost_avail:
@@ -157,14 +201,14 @@ class MLVamp(Solver):
                 ri = [self.rfwd[i-1], self.rrev[i]]
                 rvari = [self.rvarfwd[i-1], self.rvarrev[i]]
                 if self.comp_cost:
-                    zi, zvari, ci = esti.est(ri,rvari,return_cost=True)
+                    zi, zvari, ci = esti.est(ri,rvari,return_cost=True,ind_out=[1])
                     self.node_cost[i] = ci
                 else:
-                    zi, zvari = esti.est(ri,rvari,return_cost=False)
+                    zi, zvari = esti.est(ri,rvari,return_cost=False,ind_out=[1])
                             
                 # Unpack the estimates and extract the forward estimate
-                zi0, zi1 = zi
-                zvari0, zvari1 = zvari
+                zi1 = zi[0]
+                zvari1 = zvari[0]
                 self.zhat[i] = zi1
                 self.zhatvar[i] = zvari1
             
@@ -213,11 +257,11 @@ class MLVamp(Solver):
                 # Use forward and reverse messages                
                 ri = [self.rfwd[i], self.rrev[i+1]]
                 rvari = [self.rvarfwd[i], self.rvarrev[i+1]]
-                zi,zvari = esti.est(ri,rvari,return_cost)
+                zi,zvari = esti.est(ri,rvari,return_cost,ind_out=[0])
             
                 # Unpack the estimates and extract the reverse estimate
-                zi0, zi1 = zi
-                zvari0, zvari1 = zvari
+                zi0 = zi[0]
+                zvari0 = zvari[0]
                 self.zhat[i] = zi0
                 self.zhatvar[i] = zvari0
                 
@@ -272,6 +316,24 @@ class MLVamp(Solver):
             self.add_cost()
             t1 = time.time()
             self.time_iter = t1-t0
+            
+    def summary(self):
+        """
+        Prints a summary of the model
+        """        
+        print('Layer | %-30s | %-10s | %-8s' % ('Estimator', 'shape', 'var_axes'))
+        nlayers = len(self.est_list)        
+        for i, est in enumerate(self.est_list):
+            layer_str = '%s (%s)' % (est.name, est.type_name)
+            if i==0:
+                print('%3d   | %-30s | %-10s | %-8s' %\
+                    (i, layer_str, str(est.shape), str(est.var_axes)))
+            elif (i < nlayers-1):
+                print('%3d   | %-30s | %-10s | %-8s' %\
+                    (i, layer_str, str(est.shape[1]), str(est.var_axes[1])))
+            else:
+                print('%3d   | %-30s | %-10s | %-8s'  % (i, layer_str, ' ', ' '))
+        
             
             
 

@@ -102,13 +102,15 @@ def probit_test(nz0=512,nz1=4096,ncol=10, snr=30, verbose=False, plot=False,\
     # Create estimators for the input and output of the transform
     est0_gauss = vp.estim.GaussEst(zmean0,zvar0,zshape0,map_est=map_est)
     est0_dis = vp.estim.DiscreteEst(0,1,zshape0)
-    est_in = vp.estim.MixEst([est0_gauss,est0_dis],[sparse_rat,1-sparse_rat])
+    est_in = vp.estim.MixEst([est0_gauss,est0_dis],[sparse_rat,1-sparse_rat],\
+        name='Input')
     
-    est_out = vp.estim.HardThreshEst(y,yshape,thresh=thresh)
+    est_out = vp.estim.BinaryQuantEst(y,yshape,thresh=thresh, name='Output')
     
     # Estimtor for the linear transform
     Aop = vp.trans.MatrixLT(A,zshape0)
-    est_lin = vp.estim.LinEstimTwo(Aop,b,wvar,est_meth=est_meth,nit_cg=nit_cg)
+    est_lin = vp.estim.LinEstTwo(Aop,b,wvar,est_meth=est_meth,nit_cg=nit_cg,\
+        name ='Linear')
     
     # List of the estimators    
     est_list = [est_in,est_lin,est_out]
@@ -122,6 +124,7 @@ def probit_test(nz0=512,nz1=4096,ncol=10, snr=30, verbose=False, plot=False,\
     ztrue = [z0,z1]
     solver = vp.solver.mlvamp.MLVamp(est_list,msg_hdl_list,comp_cost=True,\
         hist_list=['zhat','zhatvar'])
+
     
     # Run the solver
     solver.solve()

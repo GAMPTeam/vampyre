@@ -36,7 +36,7 @@ def logistic_test(zshape=(100,10), rvar=1, tol=1, verbose=False):
     y = (u < pz)
     
     # Create an estimator
-    est = vp.estim.LogisticEstim(y=y,zrep_axes='all',max_it=100)
+    est = vp.estim.LogisticEst(y=y,var_axes='all',max_it=100)
     
     # Run the estimator 
     zhat, zhatvar = est.est(r,rvar)

@@ -65,7 +65,7 @@ def sparse_inv(nz=1000,ny=500,ns=1, snr=30, verbose=False, mse_tol=-29):
     
     # Create output estimator
     Aop = vp.trans.MatrixLT(A,zshape)
-    est_out = vp.estim.LinEstim(Aop,y,wvar,map_est=map_est)
+    est_out = vp.estim.LinEst(Aop,y,wvar,map_est=map_est)
 
     # Create the variance handler
     msg_hdl = vp.estim.MsgHdlSimp(map_est=map_est, is_complex=is_complex,\

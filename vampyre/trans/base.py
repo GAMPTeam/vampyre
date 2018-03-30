@@ -1,4 +1,10 @@
-class LinTrans(object):
+"""
+base.py:  Base class for linear transforms
+"""
+import numpy as np
+import os
+
+class BaseLinTrans(object):
     """
     Linear transform base class
     
@@ -16,12 +22,28 @@ class LinTrans(object):
     methods that derive from this class.   The attribute :code:`svd_avail`
     indicates if the linear transform class supports an SVD.      
     
+    :param shape0:  Input shape
+    :param shape1:  Output shape
+    :param dtype0:  Data type of the input
+    :param dtype1:  Data type of the otupt
+    :param svd_avail:  SVD is available
+    :param name:  String name
+    
     :note:  We say the decomposition is *SVD-like* since we do not require
         that :math:`s` is real and positive.  It may have complex values.
         Hence, the singular values are given by :math:`|s|`.
     """    
-    def __init__(self):
-        self.svd_avail = False
+    def __init__(self, shape0, shape1, dtype0=np.float64, dtype1=np.float64,\
+                svd_avail=False,name=None):
+        self.shape0 = shape0
+        self.shape1 = shape1
+        self.dtype0 = dtype0
+        self.dtype1 = dtype1
+        self.svd_avail = svd_avail
+        if name is None:
+            self.name = str(type(self))
+        else:
+            self.name = name
         
     def dot(self,z0):
         """
@@ -113,6 +135,13 @@ class LinTrans(object):
         :returns: :code:`q0` diagonal multiplication output
         """
         raise NotImplementedError()
+        
+    def __str__(self):
+        string = str(self.name) + os.linesep\
+                  + 'Input  shape: ' + str(self.shape0) + ', type:' + str(self.dtype0)\
+                  + os.linesep\
+                  + 'Output shape: ' + str(self.shape1) + ', type:' + str(self.dtype1)
+        return string
         
 
             

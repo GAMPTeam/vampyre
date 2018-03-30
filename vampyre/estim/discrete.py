@@ -4,9 +4,9 @@ import numpy as np
 import vampyre.common as common
 
 # Import from other modules in the same package
-from vampyre.estim.base import Estim
+from vampyre.estim.base import BaseEst
 
-class DiscreteEst(Estim):
+class DiscreteEst(BaseEst):
     """ Discrete estimator class
     
     An estimator corresponding to a discrete density with scalar values.
@@ -22,15 +22,19 @@ class DiscreteEst(Estim):
     :note:  The class only currently supports MMSE estimation
     """    
     def __init__(self, zval, pz, shape, var_axes=(0,),\
-                 is_complex=False):
-        Estim.__init__(self)
-        
+                 is_complex=False,name=None):
+                                 
         # Convert scalars to arrays
         if np.isscalar(zval):
             zval = np.array([zval])
         if np.isscalar(pz):
             pz = np.array([pz])
             
+        # Set parameters of base estimator
+        dtype = zval.dtype
+        BaseEst.__init__(self,shape=shape, var_axes=var_axes, dtype=dtype, name=name,\
+            type_name='DiscreteEst', nvars=1, cost_avail=True)
+                        
         # Set parameters
         self.zval = zval
         self.pz = pz
@@ -38,14 +42,8 @@ class DiscreteEst(Estim):
         self.is_complex = is_complex
         self.fz = -np.log(pz)
                 
-        # Set the variance axes
-        if var_axes == 'all':
-            ndim = len(shape)
-            var_axes = tuple(range(ndim))
-        self.var_axes = var_axes        
-        self.cost_avail = True
-                                 
-    def est_init(self, return_cost=False, avg_var_cost=True):
+                                
+    def est_init(self, return_cost=False, ind_out=None, avg_var_cost=True):
         """
         Initial estimator.
         
@@ -60,6 +58,11 @@ class DiscreteEst(Estim):
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
         """     
+        
+        # Check if ind_out is valid
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+
 
         # Compute the scalar mean, variance and cost          
         zmean = np.sum(self.pz*self.zval)
@@ -84,7 +87,7 @@ class DiscreteEst(Estim):
         else:
             return zmean, zvar                                
                     
-    def est(self,r,rvar,return_cost=False,avg_var_cost=True):
+    def est(self,r,rvar,return_cost=False,ind_out=None,avg_var_cost=True):
         """
         Estimation function
         
@@ -102,6 +105,11 @@ class DiscreteEst(Estim):
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior 
         mean, variance and optional cost.
         """
+        
+        # Check if ind_out is valid
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+        
         # Infinite variance case
         if np.any(rvar==np.Inf):
             return self.est_init(return_cost, avg_var_cost)

@@ -128,8 +128,7 @@ class MsgHdlSimp(MsgHdl):
     :param damp_var:  Damping constant for the second-order terms.  
        :code:`damp_var=1` implies no damping.   :code:`damp_var=0` will
        not update the variance and keep the values at rvar_init.
-    :param rep_axes:  The axes on which the variance is to be repeated.
-       Default :code:`rep_axes=[]` implies the variance is not repeated.
+    :param var_axes:  The axes on which the variance is to be repeated.       
     :param shape:  Shape of the estimation object on which the variance is 
        applied.
     :param Boolean is_complex:  If data is complex
@@ -142,7 +141,7 @@ class MsgHdlSimp(MsgHdl):
        :code:`[None,None]` indicates that no value is given.
     :param rvar_init:  Initial variance for each direction.    
     """
-    def __init__(self, alpha_min=1e-5, alpha_max=1-1e-5, damp=0.95, damp_var=0.95,rep_axes=(0,),\
+    def __init__(self, alpha_min=1e-5, alpha_max=1-1e-5, damp=0.95, damp_var=0.95,var_axes=(0,),\
                  shape = [], is_complex=False, map_est=True,\
                  var_scale=1,rvar_min=0,rvar_max=1e5, rinit=[None,None],rvar_init=[None,None]):
         MsgHdl.__init__(self)
@@ -150,7 +149,7 @@ class MsgHdlSimp(MsgHdl):
         self.alpha_max = alpha_max
         self.damp = damp
         self.damp_var = damp_var            
-        self.rep_axes = rep_axes
+        self.var_axes = var_axes
         self.is_complex = is_complex
         self.map_est = map_est
         self.shape = shape
@@ -175,10 +174,10 @@ class MsgHdlSimp(MsgHdl):
                 self.rvar_init[i] = np.copy(rvar_init[i])                
             if np.isscalar(self.rinit[i]):
                 self.rinit[i] = common.repeat_const(\
-                    self.rinit[i],self.shape,self.rep_axes)
+                    self.rinit[i],self.shape,self.var_axes)
             if np.isscalar(self.rvar_init[i]):
                 self.rvar_init[i] = common.repeat_const(\
-                    self.rvar_init[i],self.shape,self.rep_axes)
+                    self.rvar_init[i],self.shape,self.var_axes)
             if not (self.rinit[i] is None):
                 self.rprev[i] = np.copy(self.rinit[i])
             if not (self.rvar_init[i] is None):
@@ -269,7 +268,7 @@ class MsgHdlSimp(MsgHdl):
             rvar1 = alpha/(1-alpha)*rvar0
                                                                                         
             # Compute the message
-            alpha_rep = common.repeat_axes(alpha,self.shape,self.rep_axes,rep=False)
+            alpha_rep = common.repeat_axes(alpha,self.shape,self.var_axes,rep=False)
             r1 = (z-alpha_rep*r0)/(1-alpha_rep)
         
         # Bound the variance
@@ -315,7 +314,7 @@ class MsgHdlSimp(MsgHdl):
             return
             
         rvar_rep = common.repeat_axes(self.rvar_prev[idir],\
-            self.shape,self.rep_axes,rep=False) 
+            self.shape,self.var_axes,rep=False) 
             
         # Computes the gradient
         z = self.zprev[idir]
@@ -367,7 +366,7 @@ class MsgHdlSimp(MsgHdl):
             H *= 0.5
         
         return H
-        
+                
         
 class ListMsgHdl(MsgHdl):
     """

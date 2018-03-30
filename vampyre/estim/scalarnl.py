@@ -1,5 +1,5 @@
 """
-scalarnk.py:  Estimation methods for scalar nonlinear functions
+scalarnl.py:  Estimation methods for scalar nonlinear functions
 """
 from __future__ import division
 
@@ -7,13 +7,11 @@ import numpy as np
 
 # Import other subpackages in vampyre
 import vampyre.common as common
-import vampyre.trans as trans
 
 # Import individual classes and methods from the current sub-package
-from vampyre.estim.base import Estim
+from vampyre.estim.base import BaseEst
 
-
-class ScalarNLEstim(Estim):
+class ScalarNLEst(BaseEst):
     """
     Base class for an esitmator for a general scalar nonlinear penalty
     
@@ -22,8 +20,8 @@ class ScalarNLEstim(Estim):
     the method :code:`fnl`.  Right now, the function only implements
     MAP estimation which it performs via Newton's method.
     
-    :param zshape:  Shape of :math:`z`.
-    :param zrep_axes:  The axes on which the input variance is repeated.
+    :param shape:  Shape of :math:`z`.
+    :param var_axes:  The axes on which the input variance is repeated.
     :param step_init:  Intial gradient descent step-size
     :param step_max:  Max gradient descent step-size
     :param step_min:  Min gradient descent step-size
@@ -34,13 +32,14 @@ class ScalarNLEstim(Estim):
     :param gtol:  gradient norm tolerance.
         
     """    
-    def __init__(self,zshape,zrep_axes=(0,),max_it=10, step_init=1,\
+    def __init__(self,shape,var_axes=(0,),max_it=10, step_init=1,\
+        dtype=np.float64,name=None,\
         step_max=1,step_min=1e-8,zinit=None,is_complex=False,gtol=1e-3):
         
-        Estim.__init__(self)
-        
+        BaseEst.__init__(self,shape=shape,var_axes=var_axes,dtype=dtype,\
+            name=name, type_name='ScalarNL', nvars=1, cost_avail=True)
+
         # Save parameters
-        self.zshape = zshape         
         self.max_it = max_it
         self.cost_avail = True
         self.step_last = step_init
@@ -52,16 +51,10 @@ class ScalarNLEstim(Estim):
         
         # Set default value that the Hessian is available
         self.hess_avail = True
-        
-        # Set the repetition axes
-        ndim = len(self.zshape)
-        if zrep_axes == 'all':
-            zrep_axes = tuple(range(ndim))
-        self.zrep_axes = zrep_axes  
-        
+                
         # Set initial point
         if (zinit is None):
-            self.zlast = self.proj(np.zeros(self.zshape))
+            self.zlast = self.proj(np.zeros(self.shape))
         else:
             self.zlast = zinit
             
@@ -101,7 +94,7 @@ class ScalarNLEstim(Estim):
             f0, fgrad0 = self.fnl(z)
                     
         # Add the augmenting term
-        rvar_rep = common.repeat_axes(rvar,self.zshape,self.zrep_axes,rep=False)
+        rvar_rep = common.repeat_axes(rvar,self.shape,self.var_axes,rep=False)
         aug = np.abs(z-r)**2/rvar_rep
         aug_grad = 2*np.conj(z-r)/rvar_rep
         aug_hess = 2/rvar_rep
@@ -117,7 +110,8 @@ class ScalarNLEstim(Estim):
         else:
             return faug, faug_grad            
         
-    def est_init(self, return_cost=False):
+    def est_init(self, return_cost=False,ind_out=None,\
+        avg_var_cost=True):
         """
         Initial estimator.
         
@@ -132,9 +126,11 @@ class ScalarNLEstim(Estim):
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
         """        
-        return self.est(self.rinit,self.rvar_init,return_cost)
+        return self.est(self.rinit,self.rvar_init,return_cost,ind_out,\
+            avg_var_cost)
 
-    def est(self,r,rvar,return_cost=False):
+    def est(self,r,rvar,return_cost=False,ind_out=None,\
+        avg_var_cost=True):
         """
         Estimation function
         
@@ -149,6 +145,13 @@ class ScalarNLEstim(Estim):
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior
             mean, variance and optional cost.
         """        
+        
+        # Check parameters
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+        if not avg_var_cost:
+            raise ValueError("disabling variance averaging not supported for MixEst")
+
         # Check that the Hessian is available
         if not self.hess_avail:
             raise Exception("Second derivative must be currently supported.  "+\
@@ -213,7 +216,7 @@ class ScalarNLEstim(Estim):
         self.nit_last = it
                 
         # Average the variance
-        zhatvar = np.mean(zhatvar, axis=self.zrep_axes)
+        zhatvar = np.mean(zhatvar, axis=self.var_axes)
         if self.is_complex:
             zhatvar /= 2
                     
@@ -222,9 +225,9 @@ class ScalarNLEstim(Estim):
         else:
             return z, zhatvar
             
-class LogisticEstim(ScalarNLEstim):
-    def __init__(self,y,zrep_axes=(0,),max_it=100,gtol=1e-6,\
-        rinit=None,rvar_init=10):
+class LogisticEst(ScalarNLEst):
+    def __init__(self,y,var_axes=(0,),max_it=100,gtol=1e-6,\
+        rinit=None,rvar_init=10,name=None,dtype=np.float64):
         """
         Lotistic estimator with binary class label.
         
@@ -246,18 +249,22 @@ class LogisticEstim(ScalarNLEstim):
            :code:`tf.nn.sigmoid_cross_entropy_with_logits`
         """
         # Save parameters
-        zshape = y.shape
+        shape = y.shape
         if rinit is None:
-            self.rinit = np.zeros(zshape)
+            self.rinit = np.zeros(shape)
         else:
             self.rinit = rinit
         
         # Intialize the base class              
-        ScalarNLEstim.__init__(self,zshape,zrep_axes,max_it=max_it,\
-            step_init=1, step_max=1,step_min=1e-8,zinit=rinit)
+        #ScalarNLEst.__init__(self,shape,var_axes,max_it=max_it,\
+        #    step_init=1, step_max=1,step_min=1e-8,zinit=rinit)
+        ScalarNLEst.__init__(self,shape,var_axes=var_axes,max_it=max_it,\
+            step_init=1,dtype=dtype,name=name,\
+            step_max=1,step_min=1e-8,zinit=self.rinit)
             
         if np.isscalar(rvar_init):
-            rvar_init = np.mean(np.ones(zshape)*rvar_init,axis=self.zrep_axes)
+            var_shape = common.get_var_shape(self.shape,self.var_axes)
+            rvar_init = np.tile(rvar_init, var_shape)
         self.rvar_init = rvar_init                        
         
         # Indicate that the Hessian is available

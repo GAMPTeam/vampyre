@@ -44,7 +44,7 @@ def relu_test(zshape=(1000,10),tol=0.15,verbose=False,map_est=False):
     r1 = z1 + np.random.normal(0,1,zshape)*np.sqrt(rvar1)[None,:]
     
     # Construct the estimator
-    relu = vp.estim.ReLUEstim(shape=zshape,map_est=map_est)
+    relu = vp.estim.ReLUEst(shape=zshape,map_est=map_est)
     
     # Call the estimators
     r = [r0,r1]

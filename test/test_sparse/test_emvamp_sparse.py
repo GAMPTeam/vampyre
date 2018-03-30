@@ -97,11 +97,11 @@ def sparse_em_vamp_inv(nz0=200,nz1=100,ncol=10,snr=30, verbose=False,\
     Aop = vp.trans.MatrixLT(A,zshape0)
     b = np.zeros(zshape1)
     if vamp_meth == 'mlvamp':
-        est_lin = vp.estim.LinEstimTwo(Aop,b,map_est=map_est)
+        est_lin = vp.estim.LinEstTwo(Aop,b,map_est=map_est)
     elif tune:
-        est_lin = vp.estim.LinEstim(Aop,y,wvar=yvar,map_est=map_est,tune_wvar=True)
+        est_lin = vp.estim.LinEst(Aop,y,wvar=yvar,map_est=map_est,tune_wvar=True)
     else:
-        est_lin = vp.estim.LinEstim(Aop,y,wvar=wvar,map_est=map_est,tune_wvar=False)
+        est_lin = vp.estim.LinEst(Aop,y,wvar=wvar,map_est=map_est,tune_wvar=False)
 
     # Create the input estimator, based on whether tuning is used or not        
     if tune:
@@ -134,7 +134,6 @@ def sparse_em_vamp_inv(nz0=200,nz1=100,ncol=10,snr=30, verbose=False,\
              
     # Rnu the solver
     solver.solve()
-    zhat = solver.zhat    
     
     # Compute the MSE as a function of the iteration
     zhat_hist = solver.hist_dict['zhat']
