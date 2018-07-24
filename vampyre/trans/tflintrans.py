@@ -3,7 +3,12 @@ tflintrans.py:  Linear transforms based on Tensorflow ops
 """
 from __future__ import division
 
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except:
+    import warnings
+    warnings.warn('Tensorflow not installed.  ' +\
+                  'Some functionality may not be available')
 import numpy as np
 
 # Import other subpackages in vampyre
