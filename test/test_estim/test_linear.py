@@ -52,7 +52,7 @@ def lin_test(zshape=(500,10),Ashape=(1000,500),verbose=False,tol=0.1):
     # Perform the initial estimate.  This is just run to make sure it
     # doesn't crash
     zhat, zhatvar, cost = est.est_init(return_cost=True)
-    if (zhat.shape != r.shape) or (zhatvar.shape != wvar):
+    if (zhat.shape != r.shape): 
         raise vp.common.TestException(\
            "est_init does not produce the correct shape")            
     

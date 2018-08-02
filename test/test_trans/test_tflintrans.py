@@ -7,7 +7,14 @@ from __future__ import print_function, division
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
-import tensorflow as tf
+
+# Conditionally run test
+skip_test = False
+try:
+    import tensorflow as tf
+except:
+    skip_test = True
+
 import unittest
 import numpy as np
 
@@ -78,12 +85,14 @@ def conv2d_test(xshape=(5,32,32,3), nchan_out=4, verbose=False, diff_tol=1e-3):
 class TestCases(unittest.TestCase):
     def test_tflintrans_conv2d(self):
         """
-        Run the conv2d test.
-        
-        Note that on Windows 10 with tensorflow 1.0, there is a long warning 
-        that can be ignored.  This will be fixed in the next TF release.
-        """        
-        conv2d_test()
+        Run the conv2d test.  If tensorflow is not installed, this
+        test is skipped.
+        """    
+        if skip_test:
+            import warnings
+            warnings.warn('Tensorflow not installed.  Test skipped.')
+        else:
+            conv2d_test()
             
         
 if __name__ == '__main__':    

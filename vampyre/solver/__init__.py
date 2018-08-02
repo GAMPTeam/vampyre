@@ -3,4 +3,5 @@ from vampyre.solver.base import Solver
 from vampyre.solver.vamp import Vamp
 from vampyre.solver.mlvamp import MLVamp
 from vampyre.solver.mlvamp_admm import MLVampAdmm
+from vampyre.solver.gamp import Gamp
 

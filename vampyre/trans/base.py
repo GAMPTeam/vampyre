@@ -26,6 +26,8 @@ class BaseLinTrans(object):
     :param shape1:  Output shape
     :param dtype0:  Data type of the input
     :param dtype1:  Data type of the otupt
+    :param var_axes0:  Axes over which the input variance is averaged
+    :param var_axes1:  Axes over which the output variance is averaged
     :param svd_avail:  SVD is available
     :param name:  String name
     
@@ -34,11 +36,13 @@ class BaseLinTrans(object):
         Hence, the singular values are given by :math:`|s|`.
     """    
     def __init__(self, shape0, shape1, dtype0=np.float64, dtype1=np.float64,\
-                svd_avail=False,name=None):
+                var_axes0=(0,), var_axes1=(0,), svd_avail=False,name=None):
         self.shape0 = shape0
         self.shape1 = shape1
         self.dtype0 = dtype0
         self.dtype1 = dtype1
+        self.var_axes0 = var_axes0
+        self.var_axes1 = var_axes1
         self.svd_avail = svd_avail
         if name is None:
             self.name = str(type(self))
@@ -56,6 +60,30 @@ class BaseLinTrans(object):
         Compute conjugate transpose multiplication :math:`A^*(z1)`
         """
         raise NotImplementedError()       
+        
+    def var_dot(self,zvar0):
+        """
+        Computes `zvar1=S(zvar0)` where `S=abs(A).^2`.  
+        This method is only used for AMP and GAMP.  The default
+        implementation assumes an SVD and averaging over axis 0.
+        """
+        if not self.svd_avail:
+            raise NotImplementedError()
+        s = self.get_svd_diag()[0]
+        zvar1 = np.sum(np.abs(s)**2)*zvar0/self.shape1[0]
+        return zvar1
+
+    def var_dotH(self,zvar1):
+        """
+        Computes `zvar0=S.H(zvar1)` where `S=abs(A).^2`.  
+        This method is only used for AMP and GAMP.  The default
+        implementation assumes an SVD and averaging over axis 0.
+        """
+        if not self.svd_avail:
+            raise NotImplementedError()
+        s = self.get_svd_diag()[0]
+        zvar0 = np.sum(np.abs(s)**2)*zvar1/self.shape0[0]
+        return zvar0
     
     def Usvd(self,q1):
         """
