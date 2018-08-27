@@ -11,7 +11,6 @@ import vampyre as vp
 # Add other packages
 import numpy as np
 import unittest
-import matplotlib.pyplot as plt
 
 def debias_mse(zhat,ztrue):
     """
@@ -103,27 +102,29 @@ def probit_test(nz0=512,nz1=4096,ncol=10, snr=30, verbose=False, plot=False,\
     # Create estimators for the input and output of the transform
     est0_gauss = vp.estim.GaussEst(zmean0,zvar0,zshape0,map_est=map_est)
     est0_dis = vp.estim.DiscreteEst(0,1,zshape0)
-    est_in = vp.estim.MixEst([est0_gauss,est0_dis],[sparse_rat,1-sparse_rat])
+    est_in = vp.estim.MixEst([est0_gauss,est0_dis],[sparse_rat,1-sparse_rat],\
+        name='Input')
     
-    est_out = vp.estim.HardThreshEst(y,yshape,thresh=thresh)
+    est_out = vp.estim.BinaryQuantEst(y,yshape,thresh=thresh, name='Output')
     
     # Estimtor for the linear transform
     Aop = vp.trans.MatrixLT(A,zshape0)
-    est_lin = vp.estim.LinEstimTwo(Aop,b,wvar,est_meth=est_meth,nit_cg=nit_cg)
+    est_lin = vp.estim.LinEstTwo(Aop,b,wvar,est_meth=est_meth,nit_cg=nit_cg,\
+        name ='Linear')
     
     # List of the estimators    
     est_list = [est_in,est_lin,est_out]
     
     # Create the message handler
-    damp=0.95
-    rvarmin = 0.00
-    msg_hdl0 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape0,damp=damp,rvar1_min=rvarmin) 
-    msg_hdl1 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape1,damp=damp,rvar1_min=rvarmin) 
+    damp=1
+    msg_hdl0 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape0,damp=damp) 
+    msg_hdl1 = vp.estim.MsgHdlSimp(map_est=map_est, shape=zshape1,damp=damp) 
     msg_hdl_list  = [msg_hdl0,msg_hdl1]
     
     ztrue = [z0,z1]
     solver = vp.solver.mlvamp.MLVamp(est_list,msg_hdl_list,comp_cost=True,\
         hist_list=['zhat','zhatvar'])
+
     
     # Run the solver
     solver.solve()
@@ -157,6 +158,7 @@ def probit_test(nz0=512,nz1=4096,ncol=10, snr=30, verbose=False, plot=False,\
             
     
     if plot:
+        import matplotlib.pyplot as plt
         t = np.array(range(nit2))
         for ivar in range(nvar):
             plt.subplot(1,nvar,ivar+1)
@@ -173,8 +175,8 @@ class TestCases(unittest.TestCase):
         """
         Calls the probit estimation test case
         """
-        probit_test(ncol=10,est_meth='cg')    
-        probit_test(ncol=10,est_meth='svd')
+        #probit_test(ncol=10,est_meth='cg')    
+        probit_test(ncol=10,est_meth='svd',plot=False)
         
         
 if __name__ == '__main__':    

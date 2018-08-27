@@ -78,9 +78,10 @@ def lin_two_test(nz0=100,nz1=200,ns=10,map_est=False,verbose=False,\
     r1 = z1 + np.random.normal(0,np.sqrt(rvar1),zshape1)
         
     # Create linear estimator class
+    var_axes = ['all', 'all']
     Aop = vp.trans.MatrixLT(A,zshape0)
-    est = vp.estim.LinEstimTwo(Aop,b,wvar=wvar,map_est=map_est,z1rep_axes='all',\
-                      z0rep_axes='all',est_meth=est_meth,nit_cg=nit_cg,atol_cg=1e-9)
+    est = vp.estim.LinEstTwo(Aop,b,wvar=wvar,map_est=map_est,var_axes=var_axes,\
+                      est_meth=est_meth,nit_cg=nit_cg,atol_cg=1e-9)
     
     # Pack the variables
     r = [r0,r1]

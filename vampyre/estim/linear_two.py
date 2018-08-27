@@ -8,13 +8,12 @@ import scipy.sparse.linalg
 
 # Import other subpackages in vampyre
 import vampyre.common as common
-import vampyre.trans as trans
 
 # Import individual classes and methods from the current sub-package
-from vampyre.estim.base import Estim
+from vampyre.estim.base import BaseEst
 
                    
-class LinEstimTwo(Estim):
+class LinEstTwo(BaseEst):
     """
     Esitmator based on a linear constraint with noise
     
@@ -33,8 +32,8 @@ class LinEstimTwo(Estim):
     :param wvar:  Noise level        
     :param wrep_axes':  The axes on which the output noise variance is repeated.
         Default is 'all'.  
-    :param zrep_axes:  The axes on which the input variance is repeated.
-        Default is 'all'.
+    :param var_axes:  `var_axes[0]` and `var_axes[1]` are the axes of 
+        on which the input and output variances are averaged.
     :param Boolean is_complex:  indiates if :math:`z` is complex    
     :param Boolean map_est:  indicates if estimator is to perform MAP 
         or MMSE estimation. This is used for the cost computation.  
@@ -47,45 +46,43 @@ class LinEstimTwo(Estim):
        
     :note:  The linear operator :code:`A` must have :code:`svd_avail==True`
         to use `est_meth = svd`.  Otherwise, use `est_meth=cg`.        
-    :note:  The linear operator must also have the :code:`shape0` and
-       :code:`shape1` arrays available to compute the dimensions.
        
     :note:  The axes :code:`wrep_axes` and :code:`zerp_axes` must 
        include the axis in which :code:`A` operates for the SVD method.
     """    
-    def __init__(self,A,b,wvar=0,\
-                 z1rep_axes=(0,), z0rep_axes=(0,),wrep_axes='all',\
-                 map_est=False,is_complex=False,est_meth='svd',\
+    def __init__(self,A,b,wvar=0,var_axes=[(0,), (0,)], wrep_axes='all',\
+                 name=None,map_est=False,is_complex=False,est_meth='svd',\
                  nit_cg=100, atol_cg=1e-3, save_stats=False):
         
-        Estim.__init__(self)
         self.A = A
         self.b = b
         self.wvar = wvar
         self.map_est = map_est
         self.is_complex = is_complex
         self.cost_avail = True
-        
+            
         # Initial variance.  This is large value since the quantities
         # are underdetermined
         self.zvar0_init = np.Inf
         self.zvar1_init = np.Inf
+            
         
-        # Get the input and output shape
-        self.shape0 = A.shape0        
-        self.shape1 = A.shape1
-        
-        # Set the repetition axes
-        ndim = len(self.shape1)
-        if z0rep_axes == 'all':
-            z0rep_axes = tuple(range(ndim))        
-        if z1rep_axes == 'all':
-            z1rep_axes = tuple(range(ndim))
+        # Set parameters of the base estimator
+        shape = [A.shape0, A.shape1]
+        dtype = [A.dtype0, A.dtype1]
+        nvars = 2
+        for i in range(nvars):
+            if var_axes[i] == 'all':
+                ndim = len(shape[i])
+                var_axes[i] = tuple(range(ndim))
         if wrep_axes == 'all':
-            wrep_axes = tuple(range(ndim))            
-        self.z0rep_axes = z0rep_axes
-        self.z1rep_axes = z1rep_axes        
-        self.wrep_axes = wrep_axes        
+            ndim = len(shape[1])
+            wrep_axes = tuple(range(ndim))
+        self.wrep_axes = wrep_axes
+                    
+        BaseEst.__init__(self,shape=shape, var_axes=var_axes, dtype=dtype, name=name,\
+            type_name='LinEstTwo', nvars=nvars, cost_avail=True)        
+
         
         # Initialization depending on the estimation method
         self.est_meth = est_meth
@@ -126,10 +123,10 @@ class LinEstimTwo(Estim):
         
         # Draw random perturbations for computing the numerical gradients
         grad_step = 1;
-        self.dr0 = np.random.normal(0,grad_step,self.shape0)
-        self.dr1 = np.random.normal(0,grad_step,self.shape1)
-        self.dr0_norm_sq = np.mean(np.abs(self.dr0)**2, self.z0rep_axes)
-        self.dr1_norm_sq = np.mean(np.abs(self.dr1)**2, self.z1rep_axes)
+        self.dr0 = np.random.normal(0,grad_step,self.shape[0])
+        self.dr1 = np.random.normal(0,grad_step,self.shape[1])
+        self.dr0_norm_sq = np.mean(np.abs(self.dr0)**2, self.var_axes[0])
+        self.dr1_norm_sq = np.mean(np.abs(self.dr1)**2, self.var_axes[1])
         
         # Initialize the variables
         self.zlast = None
@@ -151,27 +148,27 @@ class LinEstimTwo(Estim):
         # Compute the norm of ||b-UU*(b)||^2/wvar
         if np.all(self.wvar > 0):
             bp = self.A.Usvd(self.bt)
-            wvar_rep = common.repeat_axes(self.wvar, self.shape1, self.wrep_axes, rep=False)
+            wvar_rep = common.repeat_axes(self.wvar, self.shape[1], self.wrep_axes, rep=False)
             err = np.abs(self.b-bp)**2
             self.bpnorm = np.sum(err/wvar_rep)
         else:
             self.bpnorm = 0
                         
         # Check that all axes on which A operates are repeated 
-        ndim = len(self.shape1)
+        ndim = len(self.shape[1])
         for i in range(ndim):
-            if not (i in self.z1rep_axes) and not (i in srep_axes):                
+            if not (i in self.var_axes[1]) and not (i in srep_axes):                
                 raise common.VpException(
                     "Variance must be constant over output axis")
             if not (i in self.wrep_axes) and not (i in srep_axes):                
                 raise common.VpException(
                     "Noise variance must be constant over output axis")                    
-            if not (i in self.z0rep_axes) and not (i in srep_axes):                
+            if not (i in self.var_axes[0]) and not (i in srep_axes):                
                 raise common.VpException(
                     "Variance must be constant over input axis")        
                             
         
-    def est_init(self, return_cost=False):
+    def est_init(self, return_cost=False, ind_out=None, avg_var_cost=True):
         """
         Initial estimator.
         
@@ -186,17 +183,29 @@ class LinEstimTwo(Estim):
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
         """       
+        # Check parameters
+        if ind_out is None:
+            ind_out = [0,1]
+        if not avg_var_cost:
+            raise ValueError("disabling variance averaging not supported for MixEst")
+
         
-        zmean0 = np.zeros(self.shape0)
-        zmean1 = np.zeros(self.shape1)
-        zmean = [zmean0,zmean1]
+        # Set initial mean and variance
+        zmean = []
+        zvar = []
+        if 0 in ind_out:
+            zmean0 = np.zeros(self.shape[0])
+            zvar0_shape = common.utils.get_var_shape(self.shape[0], self.var_axes[0])
+            zvar0 = np.tile(self.zvar0_init, zvar0_shape)
+            zmean.append(zmean0)
+            zvar.append(zvar0)
+        if 1 in ind_out:
+            zmean1 = np.zeros(self.shape[1])
+            zvar1_shape = common.utils.get_var_shape(self.shape[1], self.var_axes[1])
+            zvar1 = np.tile(self.zvar1_init, zvar1_shape)
+            zmean.append(zmean1)
+            zvar.append(zvar1)
         
-        # Compute the shapes for the variance
-        zvar0_shape = np.mean(zmean0, self.z0rep_axes).shape
-        zvar0 = np.tile(self.zvar0_init, zvar0_shape)
-        zvar1_shape = np.mean(zmean1, self.z1rep_axes).shape
-        zvar1 = np.tile(self.zvar1_init, zvar1_shape)
-        zvar = [zvar0,zvar1]
         
         if return_cost:
             cost = 0
@@ -204,7 +213,7 @@ class LinEstimTwo(Estim):
         else:
             return zmean, zvar
                     
-    def est(self,r,rvar,return_cost=False):
+    def est(self,r,rvar,return_cost=False,ind_out=None, avg_var_cost=True):
         """
         Estimation function
         
@@ -218,16 +227,22 @@ class LinEstimTwo(Estim):
         
         :returns: :code:`zhat, zhatvar, [cost]` which are the posterior
             mean, variance and optional cost.
-        """      
+        """    
+        # Check parameters
+        if ind_out is None:
+            ind_out = [0,1]
+        if not avg_var_cost:
+            raise ValueError("disabling variance averaging not supported for MixEst")
+
         if self.est_meth == 'svd':
-            return self.est_svd(r,rvar,return_cost)
+            return self.est_svd(r,rvar,return_cost,ind_out)
         elif self.est_meth == 'cg':
-            return self.est_cg(r,rvar,return_cost)
+            return self.est_cg(r,rvar,return_cost,ind_out)
         else:
             raise common.VpException(
                 "Unknown estimation method {0:s}".format(self.est_meth))
                 
-    def est_cg(self,r,rvar,return_cost=False):        
+    def est_cg(self,r,rvar,return_cost=False,ind_out=[0,1]):        
         """
         CG-based estimation function
         
@@ -255,11 +270,17 @@ class LinEstimTwo(Estim):
             
             # Compute variance numerically.  
             yvar = np.abs(self.A.dot(self.dr0))**2
-            zhatvar1 = np.mean(yvar, self.z1rep_axes)*rvar0/\
+            zhatvar1 = np.mean(yvar, self.var_axes[1])*rvar0/\
                 np.mean(self.dr0_norm_sq)
             
-            zhat = [zhat0,zhat1]
-            zhatvar = [zhatvar0, zhatvar1]
+            zhat = []
+            zhatvar = []
+            if 0 in ind_out:
+                zhat.append(zhat0)
+                zhatvar.append(zhatvar0)
+            if 1 in ind_out:
+                zhat.append(zhat1)
+                zhatvar.append(zhatvar1)
             cost = 0
             if return_cost:
                 return zhat, zhatvar, cost
@@ -271,8 +292,8 @@ class LinEstimTwo(Estim):
                "is not yet implemented")        
                         
         # Get dimensions
-        self.n0 = np.prod(self.shape0)
-        self.n1 = np.prod(self.shape1)
+        self.n0 = np.prod(self.shape[0])
+        self.n1 = np.prod(self.shape[1])
         
         """
         First-order terms
@@ -280,8 +301,8 @@ class LinEstimTwo(Estim):
         # Create the LSQR transform for the problem
         # The VAMP problem is equivalent to minimizing ||F(z)-g||^2
         F = LSQROp(self.A,self.b,rvar, self.wvar,\
-            self.z0rep_axes, self.z1rep_axes,self.wrep_axes,\
-            self.shape0, self.shape1, self.is_complex)
+            self.var_axes[0], self.var_axes[1],self.wrep_axes,\
+            self.shape[0], self.shape[1], self.is_complex)
         g = F.get_tgt_vec(r)
                     
         # Get the initial condition
@@ -295,7 +316,12 @@ class LinEstimTwo(Estim):
         lsqr_out = scipy.sparse.linalg.lsqr(F,g,iter_lim=self.nit_cg,atol=self.atol_cg)
         zvec = lsqr_out[0] + zinit
         self.zlast = zvec
-        zhat = F.unpack(zvec)
+        zhat0, zhat1 = F.unpack(zvec)
+        zhat = []
+        if 0 in ind_out:
+            zhat.append(zhat0)
+        if 1 in ind_out:
+            zhat.append(zhat1)
         
         # Save stats 
         if 'zhat_nit' in self.hist_list:
@@ -325,70 +351,71 @@ class LinEstimTwo(Estim):
         Second-order terms
         
         These are computed via the numerical gradient along a random direction
-        """        
-        # Perturb r0
-        r0p = r0 + self.dr0        
-        g0 = F.get_tgt_vec([r0p,r1])
-                    
-        # Get the initial condition
-        if self.zvec0_last is None:
-            zinit = F.pack(r0p,r1)
-        else:
-            zinit = self.zvec0_last
-        g0 -= F.dot(zinit)            
+        """ 
+        zhatvar = []
+        if 0 in ind_out:
+            # Perturb r0
+            r0p = r0 + self.dr0        
+            g0 = F.get_tgt_vec([r0p,r1])
+                        
+            # Get the initial condition
+            if self.zvec0_last is None:
+                zinit = F.pack(r0p,r1)
+            else:
+                zinit = self.zvec0_last
+            g0 -= F.dot(zinit)            
+                
+            # Run the LSQR optimization
+            lsqr_out = scipy.sparse.linalg.lsqr(F,g0,iter_lim=self.nit_cg,atol=self.atol_cg)
+            zvec0 = lsqr_out[0] + zinit
+            self.zvec0_last = zvec0        
+            dzvec = zvec0 - zvec        
+            dz0, dz1 = F.unpack(dzvec)
+            if 'zvar0_nit' in self.hist_list:
+                self.hist_dict['zvar0_nit'].append(lsqr_out[2])
+        
+            # Compute the correlations
+            alpha0 = np.mean(np.real(self.dr0.conj()*dz0),self.var_axes[0]) /\
+                self.dr0_norm_sq
+            zhatvar0 = alpha0*rvar0
+            zhatvar.append(zhatvar0)
             
-        # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g0,iter_lim=self.nit_cg,atol=self.atol_cg)
-        zvec0 = lsqr_out[0] + zinit
-        self.zvec0_last = zvec0        
-        dzvec = zvec0 - zvec        
-        dz0, dz1 = F.unpack(dzvec)
-        if 'zvar0_nit' in self.hist_list:
-            self.hist_dict['zvar0_nit'].append(lsqr_out[2])
-
-        
-        # Compute the correlations
-        alpha0 = np.mean(np.real(self.dr0.conj()*dz0),self.z0rep_axes) /\
-            self.dr0_norm_sq
-        zhatvar0 = alpha0*rvar0
-        
-        # Perturb r1
-        r1p = r1 + self.dr1
-        g1 = F.get_tgt_vec([r0,r1p])
-                    
-        # Get the initial condition
-        if self.zvec1_last is None:
-            zinit = F.pack(r0,r1p)
-        else:
-            zinit = self.zvec1_last
-        g1 -= F.dot(zinit)
+        if 1 in ind_out:
             
-        # Run the LSQR optimization
-        lsqr_out = scipy.sparse.linalg.lsqr(F,g1,iter_lim=self.nit_cg,atol=self.atol_cg)
-        zvec1 = lsqr_out[0] + zinit
-        self.zvec1_last = zvec1
-        dzvec = zvec1 - zvec        
-        dz0, dz1 = F.unpack(dzvec)
-        if 'zvar1_nit' in self.hist_list:
-            self.hist_dict['zvar1_nit'].append(lsqr_out[2])
-        
-        
-        
-        # Compute the correlations
-        alpha1 = np.mean(np.real(self.dr1.conj()*dz1),self.z1rep_axes) /\
-            self.dr1_norm_sq
-        zhatvar1 = alpha1*rvar1
-        
-        # Pack the variances            
-        zhatvar = [zhatvar0, zhatvar1]
-                                                         
+            # Perturb r1
+            r1p = r1 + self.dr1
+            g1 = F.get_tgt_vec([r0,r1p])
+                        
+            # Get the initial condition
+            if self.zvec1_last is None:
+                zinit = F.pack(r0,r1p)
+            else:
+                zinit = self.zvec1_last
+            g1 -= F.dot(zinit)
+                
+            # Run the LSQR optimization
+            lsqr_out = scipy.sparse.linalg.lsqr(F,g1,iter_lim=self.nit_cg,atol=self.atol_cg)
+            zvec1 = lsqr_out[0] + zinit
+            self.zvec1_last = zvec1
+            dzvec = zvec1 - zvec        
+            dz0, dz1 = F.unpack(dzvec)
+            if 'zvar1_nit' in self.hist_list:
+                self.hist_dict['zvar1_nit'].append(lsqr_out[2])
+            
+                        
+            # Compute the correlations
+            alpha1 = np.mean(np.real(self.dr1.conj()*dz1),self.var_axes[1]) /\
+                self.dr1_norm_sq
+            zhatvar1 = alpha1*rvar1
+            zhatvar.append(zhatvar1)
+                                                                
         if return_cost:
             return zhat,zhatvar, cost
         else:
             return zhat,zhatvar                    
         
 
-    def est_svd(self,r,rvar,return_cost=False):
+    def est_svd(self,r,rvar,return_cost=False,ind_out=[0,1]):
         """
         SVD-based estimation function
         
@@ -413,17 +440,17 @@ class LinEstimTwo(Estim):
         s, sshape, srep_axes = self.A.get_svd_diag()        
         
         # Get dimensions
-        nz1 = np.prod(self.shape1)
-        nz0 = np.prod(self.shape0)
+        nz1 = np.prod(self.shape[1])
+        nz0 = np.prod(self.shape[0])
         ns = np.prod(sshape)
         
         # Reshape the variances to match the dimensions of the first-order
         # terms
         s_rep = common.repeat_axes(s, sshape, srep_axes, rep=False)
         rvar0_rep = common.repeat_axes(
-                        rvar0, self.shape0, self.z0rep_axes, rep=False)        
+                        rvar0, self.shape[0], self.var_axes[0], rep=False)        
         rvar1_rep = common.repeat_axes(
-                        rvar1, self.shape1, self.z1rep_axes, rep=False)
+                        rvar1, self.shape[1], self.var_axes[1], rep=False)
         wvar_rep = common.repeat_axes(
                         self.wvar, sshape, self.wrep_axes, rep=False)
 
@@ -464,11 +491,17 @@ class LinEstimTwo(Estim):
             zhat0 = r0
             zhatvar0 = rvar0
             zhat1 = self.A.dot(r0) + self.b
-            qvar1 = np.mean(np.abs(s_rep)**2*rvar0_rep+wvar_rep,self.z1rep_axes)
+            qvar1 = np.mean(np.abs(s_rep)**2*rvar0_rep+wvar_rep,self.var_axes[1])
             zhatvar1 = ns/nz1*qvar1 + (1-ns/nz1)*self.wvar
             cost = 0  # FIX THIS
-            zhat = [zhat0,zhat1]
-            zhatvar = [zhatvar0,zhatvar1]
+            zhat = []
+            zhatvar = []
+            if 0 in ind_out:
+                zhat.append(zhat0)
+                zhatvar.append(zhatvar0)
+            if 1 in ind_out:
+                zhat.append(zhat1)
+                zhatvar.append(zhatvar1)
             if return_cost:
                 return zhat,zhatvar, cost
             else:
@@ -498,8 +531,12 @@ class LinEstimTwo(Estim):
         qbar1p = (wvar_rep*qbar1 + rvar1_rep*self.bt)/(wvar_rep+rvar1_rep)
         zhat0 = r0 + self.A.Vsvd(qhat0-qbar0)
         zhat1 = z1p + self.A.Usvd(qhat1-qbar1p)
-        zhat = [zhat0,zhat1]
-                
+        zhat = []
+        if 0 in ind_out:
+            zhat.append(zhat0)            
+        if 1 in ind_out:
+            zhat.append(zhat1)
+        
         """
         Compute the variance.
         From the above calcualtions, we have
@@ -510,15 +547,20 @@ class LinEstimTwo(Estim):
         """
         qvar0 = rvar0_rep*(1-d*rvar0_rep*np.abs(s_rep)**2)
         qvar1 = rvar1_rep*(1-d*rvar1_rep)
-        qvar0 = np.mean(qvar0, axis=self.z0rep_axes)
-        qvar1 = np.mean(qvar1, axis=self.z1rep_axes)
+        qvar0 = np.mean(qvar0, axis=self.var_axes[0])
+        qvar1 = np.mean(qvar1, axis=self.var_axes[1])
         
         """
         Compute the variance of z
         """
         zhatvar0 = ns/nz0*qvar0 + (1-ns/nz0)*rvar0
         zhatvar1 = ns/nz1*qvar1 + (1-ns/nz1)*rvar1*self.wvar/(self.wvar+rvar1)
-        zhatvar = [zhatvar0, zhatvar1]                        
+        zhatvar = []
+        if 0 in ind_out:
+            zhatvar.append(zhatvar0)            
+        if 1 in ind_out:
+            zhatvar.append(zhatvar1)
+                     
 
         if not return_cost:
             return zhat, zhatvar

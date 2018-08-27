@@ -3,16 +3,21 @@ tflintrans.py:  Linear transforms based on Tensorflow ops
 """
 from __future__ import division
 
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except:
+    import warnings
+    warnings.warn('Tensorflow not installed.  ' +\
+                  'Some functionality may not be available')
 import numpy as np
 
 # Import other subpackages in vampyre
 import vampyre.common as common
 
 # Import individual classes from same modules in the same package
-from vampyre.trans.base import LinTrans
+from vampyre.trans.base import BaseLinTrans
 
-class TFLinTrans(LinTrans):
+class TFLinTrans(BaseLinTrans):
     """
     Linear transform class based on Tensorflow operations
     
@@ -24,7 +29,7 @@ class TFLinTrans(LinTrans):
     :note:  It is assumed that the computation graph from `x_op` to `y_op` is
        linear (possibly affine).
     """    
-    def __init__(self,x_op,y_op,sess,remove_bias=False):
+    def __init__(self,x_op,y_op,sess,remove_bias=False,name=None):
         # Save parameters
         self.x_op = x_op
         self.y_op = y_op
@@ -32,10 +37,13 @@ class TFLinTrans(LinTrans):
         self.remove_bias = remove_bias
 
         # Get dimensions and data types
-        self.shape0 = x_op.get_shape()
-        self.shape1 = y_op.get_shape()
-        self.dtype0 = x_op.dtype
-        self.dtype1 = y_op.dtype
+        shape0 = x_op.get_shape()
+        shape1 = y_op.get_shape()
+        dtype0 = x_op.dtype
+        dtype1 = y_op.dtype
+        BaseLinTrans.__init__(self, shape0, shape1, dtype0, dtype1,\
+           svd_avail=False,name=name)
+
                 
         # Create the ops for the gradient.  If the linear operator is y=F(x),
         # then z = y'*F(x).  Therefore, dz/dx = F'(y).
@@ -49,6 +57,7 @@ class TFLinTrans(LinTrans):
             self.y_bias = self.sess.run(self.y_op, feed_dict={self.x_op: xzero})
         else:
             self.y_bias = 0
+            
                 
     
     def dot(self,x):

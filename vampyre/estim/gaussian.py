@@ -5,11 +5,11 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-from vampyre.common.utils import repeat_axes, repeat_sum
-from vampyre.common.utils import TestException
-from vampyre.estim.base import Estim
+from vampyre.common.utils import get_var_shape, repeat_axes, repeat_sum
+from vampyre.common.utils import VpException
+from vampyre.estim.base import BaseEst
 
-class GaussEst(Estim):
+class GaussEst(BaseEst):
     """ Gaussian estimator class
     
     Estimator for a Gaussian penalty 
@@ -29,38 +29,46 @@ class GaussEst(Estim):
     :param Boolean is_complex:  indiates if :math:`z` is complex    
     :param Boolean map_est:  indicates if estimator is to perform MAP 
         or MMSE estimation. This is used for the cost computation.
+    :param Boolean tune_zvar:  indicates if :code:`zvar` is to be
+        estimated via EM
+    :param Boolean tune_rvar:  indicates if the proximal variance
+        :code:`rvar` is estimated.
     """    
-    def __init__(self, zmean, zvar, shape, 
-                 var_axes = (0,), zmean_axes='all',
-                 is_complex=False, map_est=False):
-        Estim.__init__(self)
+    def __init__(self, zmean, zvar, shape,name=None,\
+                 var_axes = (0,), zmean_axes='all',\
+                 is_complex=False, map_est=False, tune_zvar=False,\
+                 tune_rvar=False):
+                
+        if np.isscalar(shape):
+            shape = (shape,)
+        if is_complex:
+            dtype = np.double
+        else:
+            dtype = np.complex
+             
+        BaseEst.__init__(self,shape=shape,dtype=dtype,name=name,
+                         var_axes=var_axes,type_name='GaussEst', cost_avail=True)
         self.zmean = zmean
         self.zvar = zvar
         self.cost_avail = True  
         self.is_complex = is_complex  
         self.map_est = map_est         
-        self.shape = shape if (type(shape) is not int) else (shape,)
-        self.var_axes = var_axes
         self.zmean_axes = zmean_axes
+        self.tune_zvar = tune_zvar
+        self.tune_rvar = tune_rvar
         
         ndim = len(self.shape)
-        if self.var_axes == 'all':
-            self.var_axes = tuple(range(ndim))        
         if self.zmean_axes == 'all':
             self.zmean_axes = tuple(range(ndim))
             
         # If zvar is a scalar, then repeat it to the required shape,
         # which are all the dimensions not being averaged over
         if np.isscalar(self.zvar):
-            ndim = len(self.shape)
-            axes_spec = [i for i in range(ndim) if i not in self.var_axes]
-            if axes_spec != []:
-                shape1 = tuple(np.array(self.shape)[axes_spec])
-                self.zvar = np.tile(self.zvar, shape1)
-        
+            var_shape = get_var_shape(self.shape, self.var_axes)
+            self.zvar = np.tile(self.zvar, var_shape) 
                  
         
-    def est_init(self, return_cost=False, avg_var_cost=True):
+    def est_init(self, return_cost=False, ind_out=None, avg_var_cost=True):
         """
         Initial estimator.
         
@@ -75,6 +83,11 @@ class GaussEst(Estim):
         :returns: :code:`zmean, zvar, [cost]` which are the
             prior mean and variance
         """        
+        
+        # Check if ind_out is valid
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+            
         zmean = repeat_axes(self.zmean, self.shape, self.zmean_axes)
         zvar  = self.zvar
         if not avg_var_cost:
@@ -87,13 +100,15 @@ class GaussEst(Estim):
             clog = np.log(2*np.pi*self.zvar)
             if avg_var_cost:
                 cost = repeat_sum(clog, self.shape, self.var_axes)
+            else:
+                cost = clog
         else:
             cost = 0
         if not self.is_complex:
             cost = 0.5*cost
         return zmean, zvar, cost
                     
-    def est(self,r,rvar,return_cost=False,avg_var_cost=True):
+    def est(self,r,rvar,return_cost=False,ind_out=None,avg_var_cost=True):
         """
         Estimation function
         
@@ -112,6 +127,10 @@ class GaussEst(Estim):
             mean, variance and optional cost.
         """
         
+        # Check if ind_out is valid
+        if (ind_out != [0]) and (ind_out != None):
+            raise ValueError("ind_out must be either [0] or None")
+        
         # Infinite variance case
         if np.any(rvar==np.Inf):
             return self.est_init(return_cost, avg_var_cost)
@@ -123,6 +142,13 @@ class GaussEst(Estim):
             zhatvar = repeat_axes(zhatvar,self.shape,self.var_axes) 
         
         zhat = gain*(r-self.zmean) + self.zmean
+        
+        # EM tuning
+        if self.tune_zvar:
+            if not avg_var_cost:
+                raise VpException("must use variance averaging when using auto-tuning")
+            self.zvar = np.mean(np.abs(zhat-self.zmean)**2, self.var_axes) +\
+                zhatvar
         
         if not return_cost:                
             return zhat, zhatvar

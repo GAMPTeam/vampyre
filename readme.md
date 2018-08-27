@@ -22,18 +22,16 @@ Subsequently, the package can be installed via `pip` with the `-e` directive to 
 Voilà.
 
 ## Testing
-Testing is accomplished via `nose` and `nose-timer`. To run the full-suite of package tests, run the following from the root vampyre directory.
-
+Testing is accomplished via the
+[`unittest`](https://docs.python.org/3.5/library/unittest.html)
+test framework.
+All test scripts can be found in the `vampyre/test` directory. 
+To run the full-suite of package tests, `cd` to the `vampyre/test`
+directory and run the following:
 ```bash
-> python setup.py test
+> python -m unittest discover -v
 ```
 
-To run tests with timing results, run the following command from the root vampyre directory.
-```bash
-> nosetests --with-timer
-```
-
-All test scripts can be found in the `./vampyre/vampyre/test` directory. All python scripts prefaced as `test_` will have their functions prefaced as `def test_*:` run.
 
 
 ## Building Documentation
