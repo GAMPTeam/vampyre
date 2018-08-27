@@ -5,11 +5,11 @@ Created on Sun Apr  9 12:00:51 2017
 @author: hbraun
 """
 
-from vampyre.trans.base import LinTrans
+from vampyre.trans.base import BaseLinTrans
 import numpy as np
 
 
-class Fourier2LT(LinTrans):
+class Fourier2LT(BaseLinTrans):
     """Linear transform defined by a 2-D Fourier transform.
     
     The class defines a linear transform :math:`z_1 = Fz_0` where :math:`F`
@@ -23,7 +23,7 @@ class Fourier2LT(LinTrans):
     
     """
     def __init__(self, fftShape, norm='ortho'):
-        LinTrans.__init__(self)
+        BaseLinTrans.__init__(self)
         
         #constants
         self._FT_AXES = (0,1)
