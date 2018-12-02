@@ -34,8 +34,13 @@ class Wavelet2DLT(BaseLinTrans):
         shape1 = (nrow,ncol)
         dtype0 = dtype
         dtype1 = dtype
+
+        if pywt.Wavelet(wavelet).orthogonal:
+            svd_avail = True #SVD calculation assumes an orthogonal wavelet
+        else:
+            svd_avail = False
         BaseLinTrans.__init__(self, shape0, shape1, dtype0, dtype1,\
-           svd_avail=True,name=name)
+           svd_avail=svd_avail,name=name)
 
 
         # Set the mode to periodic to make the wavelet orthogonal
@@ -101,10 +106,7 @@ class Wavelet2DLT(BaseLinTrans):
         """
         Multiplication by SVD term :math:`U^*`
         """
-        if pywt.Wavelet(self.wavelet).orthogonal:
-            return self.dotH(z1)
-        else:
-            raise NotImplementedError('No SVD is defined for wavelets of type %s!'%self.wavelet)
+        return self.dotH(z1)
 
 
     def Vsvd(self,q0):
