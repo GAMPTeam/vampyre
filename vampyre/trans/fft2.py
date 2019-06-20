@@ -39,7 +39,7 @@ class Fourier2DLT(UnitarySvdMixin, BaseLinTrans):
         if fft_shape is None:
             fft_shape = [in_shape[i] for i in self.fft_axes]
         else: 
-            shape1[(fft_axes,)] = self.fft_shape
+            shape1[(fft_axes,)] = fft_shape
         self.fft_shape = fft_shape
         self._scale_factor = (np.prod(self.fft_shape))
         
