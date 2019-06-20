@@ -1,5 +1,5 @@
 """
-tflintrans.py:  Linear transforms based on Tensorflow ops
+wavelet.py:  Linear transforms based on 2d discrete wavelet transform
 """
 from __future__ import division
 

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Apr  9 12:00:51 2017
-
-@author: hbraun
+fft2.py: Linear transform based on 2D Fourier transform
 """
 
 from vampyre.trans.base import BaseLinTrans
