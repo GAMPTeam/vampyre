@@ -33,9 +33,7 @@ class TestCases(unittest.TestCase):
 
         
         mse = np.sum((x - x_roundtrip)**2)
-        self.assertLess(mse,err_tol)
-        
-        
+        self.assertLess(mse,err_tol)   
 
 if __name__ == '__main__':    
     unittest.main()
