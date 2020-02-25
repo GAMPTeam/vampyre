@@ -5,10 +5,12 @@ from __future__ import division
 
 try:
     import tensorflow as tf
-except:
-    import warnings
-    warnings.warn('Tensorflow not installed.  ' +\
-                  'Some functionality may not be available')
+    tf_import_error = None
+except ImportError as e:
+    # The TFLinTrans class will be unavailable.
+    # Raise an error only if someone tries to use it.
+    tf_import_error = e
+
 import numpy as np
 
 # Import other subpackages in vampyre
@@ -30,6 +32,8 @@ class TFLinTrans(BaseLinTrans):
        linear (possibly affine).
     """    
     def __init__(self,x_op,y_op,sess,remove_bias=False,name=None):
+        if tf_import_error is not None:
+            raise tf_import_error
         # Save parameters
         self.x_op = x_op
         self.y_op = y_op
@@ -77,4 +81,3 @@ class TFLinTrans(BaseLinTrans):
             feed_dict={self.ytr_op: ytr})
         xtr = np.reshape(xtr, self.shape0)
         return xtr
-    
