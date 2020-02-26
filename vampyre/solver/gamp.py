@@ -105,7 +105,7 @@ class Gamp(Solver):
         if not self.est0.cost_avail or not self.est1.cost_avail:
             self.comp_cost = False
             
-        # Initial esitmate from the input node
+        # Initial estimate from the input node
         if self.comp_cost:
             z0, zvar0, cost0 = self.est0.est_init(return_cost=True)
         else:

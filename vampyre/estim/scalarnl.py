@@ -13,9 +13,9 @@ from vampyre.estim.base import BaseEst
 
 class ScalarNLEst(BaseEst):
     """
-    Base class for an esitmator for a general scalar nonlinear penalty
+    Base class for an estimator for a general scalar nonlinear penalty
     
-    This esitmator corresponds to a general nonlinear penalty :math:`f(z)`.
+    This estimator corresponds to a general nonlinear penalty :math:`f(z)`.
     The penalty function is defined in the derived class by implementing
     the method :code:`fnl`.  Right now, the function only implements
     MAP estimation which it performs via Newton's method.

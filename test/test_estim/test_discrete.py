@@ -30,7 +30,7 @@ def discrete_test(zshape=(1000,10), verbose=False, nvals=10,\
     :param Boolean verbose:  prints results.  
     :param tol_init:  tolerance on initial estimate for test to be considered
        a pass.  This tolerance should be very low.
-    :param tol_est:  Error tolerance on the esitmation error.  This should
+    :param tol_est:  Error tolerance on the estimation error.  This should
        be much higher since the Monte Carlo simulations take a large number
        of samples to converge.
     :param nvals:  number of values in the discrete distribution

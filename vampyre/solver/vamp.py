@@ -94,7 +94,7 @@ class Vamp(Solver):
         if not self.est1.cost_avail or not self.est2.cost_avail or self.msg_hdl == []:
             self.comp_cost = False
             
-        # Initial esitmate from the first factor node
+        # Initial estimate from the first factor node
         if self.comp_cost:
             z1, zvar1, cost1 = self.est1.est_init(return_cost=True)
         else:
