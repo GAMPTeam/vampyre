@@ -36,12 +36,16 @@ class Vamp(Solver):
     :param prt_period:  Period for printing progress (value of 0 indicates
         no printing)
     """
-    def __init__(self, est1, est2, msg_hdl, hist_list=[], nit=10,\
+    def __init__(self, est1, est2, msg_hdl=None, hist_list=[], nit=10,
         comp_cost=False,prt_period=0, is_complex=False, map_est=False):
         Solver.__init__(self,hist_list)
         self.est1 = est1
         self.est2 = est2
-        self.msg_hdl = msg_hdl        
+        if msg_hdl is None:
+            msg_hdl = estim.MsgHdlSimp(is_complex=is_complex,
+                                       map_est=map_est,
+                                       shape=self.est1.shape)
+        self.msg_hdl = msg_hdl
         self.nit = nit
         self.comp_cost = comp_cost
         self.prt_period = prt_period
@@ -68,9 +72,6 @@ class Vamp(Solver):
                 (self.est1.name, str(self.est1.var_axes),\
                  str(self.msg_hdl.var_axes))                
             
-        # Set default message handler
-        if msg_hdl is None:
-            self.msg_hdl = estim.MsgHdlSimp()
         
     def summary(self):
         """
