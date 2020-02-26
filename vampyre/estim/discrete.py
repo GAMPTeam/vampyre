@@ -24,6 +24,8 @@ class DiscreteEst(BaseEst):
     def __init__(self, zval, pz, shape, var_axes=(0,),\
                  is_complex=False,name=None):
                                  
+        if np.isscalar(shape):
+            shape = (shape,)
         # Convert scalars to arrays
         if np.isscalar(zval):
             zval = np.array([zval])
