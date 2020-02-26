@@ -27,6 +27,10 @@ class DiscreteEst(BaseEst):
         # Convert scalars to arrays
         if np.isscalar(zval):
             zval = np.array([zval])
+        if not is_complex and np.any(zval.imag != 0):
+            import warnings
+            warnings.warn('zval is complex, but is_complex is False (forcing True)')
+            is_complex = True
         if np.isscalar(pz):
             pz = np.array([pz])
             
