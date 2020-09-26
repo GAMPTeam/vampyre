@@ -45,6 +45,8 @@ class BaseEst(object):
         :param cost_avail:  Flag indicating if the estimator can compute the cost.
         """    
 
+        if np.isscalar(shape):
+            shape = (shape,)
         self.shape = shape
         self.dtype = dtype
         self.type_name = type_name
@@ -143,4 +145,4 @@ class BaseEst(object):
     def __str__(self):
         string = str(self.type_name) + ', name: ' + str(self.name) + ', '\
                   + 'shape: ' + str(self.shape) + ', type:' + str(self.dtype)
-        return string        
+        return string

@@ -15,9 +15,9 @@ from vampyre.estim.base import BaseEst
 
 class BinaryQuantEst(BaseEst):
     """
-    Esitmator for a binary hard threhsold function output
+    Estimator for a binary hard threhsold function output
     
-    This esitmator corresponds to a binary measurement :math:`y=0,1` where
+    This estimator corresponds to a binary measurement :math:`y=0,1` where
     :math:`y=1` if :math:`z > t` and :math:`y=0` else.  The value :math:`t`
     is a threshold.  
     

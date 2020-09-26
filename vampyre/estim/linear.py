@@ -15,9 +15,9 @@ from vampyre.estim.base import BaseEst
 
 class LinEst(BaseEst):
     """
-    Esitmator based on a linear constraint with noise
+    Estimator based on a linear constraint with noise
 
-    This esitmator corresponds to a linear constraint of the form
+    This estimator corresponds to a linear constraint of the form
     :math:`y = Az + w`
     where :math:`w \\sim {\\mathcal N}(0,\\tau_w I)`.
     Specifically, the penalty is

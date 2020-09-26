@@ -21,10 +21,10 @@ In signal processing, the optimizations is used for linear inverse problems,
 where :math:`z` may represent an image or some other object to be
 reconstructed,  :math:`A` is an observation
 transform (liking a blurring operation), and :math:`\phi(z)` is used
-to constrain the object in the reconstruction.  In compressed sensing,
-the function :math:`\phi(z)=\lambda\|z\|_1` to impose sparsity on 
-:math:`z`.
+to constrain the object in the reconstruction. For example, LASSO
+compressed sensing can be accomplished with :math:`\phi(z)=\lambda\|z\|_1`
+as a convex penalty to impose sparsity on :math:`z`.
 
-This simple regularized least squares optimization has the basic ingridients
+This simple regularized least squares optimization has the basic ingredients
 of the problems solved by the :mod:`vampyre` package:  unknown vectors, 
-factorizable costs functions and linear constraints.    
+factorizable cost functions and linear constraints.
