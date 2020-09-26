@@ -1,7 +1,12 @@
 from setuptools import setup
 
-import numpy as np
-np.random.seed(1) # make the tests repeatable
+try:
+    # Try to seed the prng to make the tests repeatable.
+    # Unfortunately, numpy might not be installed.
+    import numpy as np
+    np.random.seed(1)
+except ImportError as e:
+    pass
 
 setup(name = 'vampyre',
       version = '0.0',
